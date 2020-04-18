@@ -1,0 +1,41 @@
+class EJX::Template::Base
+  
+  attr_accessor :children, :imports
+
+  def initialize(escape: nil)
+    @children = []
+    @escape = escape
+    @imports = []
+  end
+
+  def to_module
+    var_generator = EJX::Template::VarGenerator.new
+    
+    output = if @escape
+      "import {" + @escape.split('.').reverse.join(" as escape} from '") + "';\n"
+    else
+      "import {append as __ejx_append} from 'ejx';\n"
+    end
+    
+    @imports.each do |import|
+      output << import << "\n"
+    end
+    
+    output << "\nexport default async function (locals) {\n"
+    output << "    var __output = [], __promises = [];\n    \n"
+    
+    @children.each do |child|
+      output << case child
+      when EJX::Template::String
+        "    __output.push(#{child.to_js});\n"
+      else
+        child.to_js(var_generator: var_generator)
+      end
+    end
+    output << "\n    await Promise.all(__promises);\n"
+    output << "    return __output;\n"
+    output << "}"
+    output
+  end
+
+end
