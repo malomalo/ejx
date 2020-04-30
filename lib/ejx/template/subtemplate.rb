@@ -8,13 +8,14 @@ class EJX::Template::Subtemplate
   end
 
   def to_js(indentation: 4, var_generator: nil, append: "__output")
+    global_output_var = var_generator.next
     output_var = var_generator.next
-    output =  "#{' '*indentation}var #{output_var} = [];\n"
+    
+    output =  "#{' '*indentation}var #{global_output_var} = [];\n"
     output << "#{' '*indentation}__ejx_append("
-    output << @children.first
-    output << "\n"
-
-    # var_generator ||= EJX::Template::VarGenerator.new
+    output << @children.first << "\n"
+    output << "#{' '*(indentation+4)}var #{output_var} = [];\n"
+    
     @children[1..-2].each do |child|
       output << case child
       when EJX::Template::String
@@ -23,9 +24,11 @@ class EJX::Template::Subtemplate
         child.to_js(indentation: indentation + 4, var_generator: var_generator, append: output_var)
       end
     end
-    output << ' '*indentation
-    output << @children.last
-    output << ", #{append}, true, __promises, #{output_var});\n"
+    
+    output << ' '*(indentation+4) << "#{global_output_var}.push(#{output_var});\n";
+    output << ' '*(indentation+4) << "return #{output_var};\n";
+    output << ' '*indentation << @children.last
+    output << ", #{append}, true, __promises, #{global_output_var});\n"
 
     output
   end

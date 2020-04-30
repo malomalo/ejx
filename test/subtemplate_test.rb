@@ -7,7 +7,7 @@ class SubtemplateTest < Minitest::Test
       <% formTag = function(template) {
             var a = document.createElement("form");
             a.append.apply(a, template());
-            return a
+            return a;
         } %>
 
       <%- formTag(function () { %>
@@ -25,16 +25,19 @@ class SubtemplateTest < Minitest::Test
           formTag = function(template) {
             var a = document.createElement("form");
             a.append.apply(a, template());
-            return a
+            return a;
         }
           var __a = [];
           __ejx_append(formTag(function () {
-              var __b = document.createElement("input");
-              __b.setAttribute("type", "text");
-              __ejx_append(__b, __a, false, __promises);
+              var __b = [];
               var __c = document.createElement("input");
-              __c.setAttribute("type", "submit");
-              __ejx_append(__c, __a, false, __promises);
+              __c.setAttribute("type", "text");
+              __ejx_append(__c, __b, false, __promises);
+              var __d = document.createElement("input");
+              __d.setAttribute("type", "submit");
+              __ejx_append(__d, __b, false, __promises);
+              __a.push(__b);
+              return __b;
           }), __output, true, __promises, __a);
 
           await Promise.all(__promises);
@@ -73,11 +76,14 @@ class SubtemplateTest < Minitest::Test
          }
           var __a = [];
           __ejx_append(formTag(function (f) {
+              var __b = [];
               if (true) {
-              __ejx_append("\\n      yes\\n  ", __a, false, __promises);
+              __ejx_append("\\n      yes\\n  ", __b, false, __promises);
               } else {
-              __ejx_append("\\n      no\\n  ", __a, false, __promises);
+              __ejx_append("\\n      no\\n  ", __b, false, __promises);
               }
+              __a.push(__b);
+              return __b;
           }), __output, true, __promises, __a);
 
           await Promise.all(__promises);

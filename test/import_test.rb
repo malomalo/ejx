@@ -23,10 +23,13 @@ class ImportTest < Minitest::Test
           
           var __a = [];
           __ejx_append(x(function () {
-              var __b = document.createElement("input");
-              __b.setAttribute("type", "submit");
-              __ejx_append(__b, __a, false, __promises);
-              __ejx_append(a, __a, true, __promises);
+              var __b = [];
+              var __c = document.createElement("input");
+              __c.setAttribute("type", "submit");
+              __ejx_append(__c, __b, false, __promises);
+              __ejx_append(a, __b, true, __promises);
+              __a.push(__b);
+              return __b;
           }), __output, true, __promises, __a);
 
           await Promise.all(__promises);
