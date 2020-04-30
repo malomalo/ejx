@@ -92,4 +92,36 @@ class SubtemplateTest < Minitest::Test
     JS
   end
   
+  test "subtemplate as first option" do
+    result = EJX.compile(<<~DATA)
+      <%= formTag(function () { %>
+        <input type="text" >
+        <input type="submit" />
+      <% }, function () { return 1; }) %>
+    DATA
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          var __a = [];
+          __ejx_append(formTag(function () {
+              var __b = [];
+              var __c = document.createElement("input");
+              __c.setAttribute("type", "text");
+              __ejx_append(__c, __b, false, __promises);
+              var __d = document.createElement("input");
+              __d.setAttribute("type", "submit");
+              __ejx_append(__d, __b, false, __promises);
+              __a.push(__b);
+              return __b;
+          }, function () { return 1; }), __output, true, __promises, __a);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
 end

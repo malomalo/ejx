@@ -63,7 +63,7 @@ class EJX::Template
           import += ';' if !import.end_with?(';')
           @tree.first.imports << import
           @stack.pop
-        elsif @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}\s*\)/m) && !pm.match(/\A\s*\}.*\{\s*\Z/m)
+        elsif @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}.*\)/m) && !pm.match(/\A\s*\}.*\{\s*\Z/m)
           subtemplate = @tree.pop
           subtemplate.children << pm.strip
           @tree.last.children << subtemplate
