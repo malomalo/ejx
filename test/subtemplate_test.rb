@@ -2,7 +2,7 @@ require 'test_helper'
 
 class SubtemplateTest < Minitest::Test
 
-  test "quotes" do
+  test "a simple subtemplate" do
     result = EJX.compile(<<~DATA)
       <% formTag = function(template) {
             var a = document.createElement("form");
@@ -46,7 +46,7 @@ class SubtemplateTest < Minitest::Test
     JS
   end
   
-  test "with an else" do
+  test "a simple subtemplate with a if inside it" do
     result = EJX.compile(<<~DATA)
       <% formTag = function(template) {
             var a = document.createElement("form");
@@ -124,4 +124,49 @@ class SubtemplateTest < Minitest::Test
       }
     JS
   end
+  
+  test "a simple subtemplate with new function syntax" do
+    result = EJX.compile(<<~DATA)
+      <% formTag = function(template) {
+            var a = document.createElement("form");
+            a.append.apply(a, template());
+            return a;
+        } %>
+
+      <%- formTag(() => { %>
+        <input type="text" >
+        <input type="submit" />
+      <% }) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          formTag = function(template) {
+            var a = document.createElement("form");
+            a.append.apply(a, template());
+            return a;
+        }
+          var __a = [];
+          __ejx_append(formTag(() => {
+              var __b = [];
+              var __c = document.createElement("input");
+              __c.setAttribute("type", "text");
+              __ejx_append(__c, __b, false, __promises);
+              var __d = document.createElement("input");
+              __d.setAttribute("type", "submit");
+              __ejx_append(__d, __b, false, __promises);
+              __a.push(__b);
+              return __b;
+          }), __output, true, __promises, __a);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
 end
