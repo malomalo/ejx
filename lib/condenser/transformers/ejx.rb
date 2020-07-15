@@ -1,5 +1,7 @@
 class Condenser::EjxTransformer < Condenser::NodeProcessor
 
+  attr_accessor :options
+  
   def initialize(options = {})
     @options = options
   end
