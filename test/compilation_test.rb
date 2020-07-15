@@ -20,6 +20,35 @@ class CompilationTest < Minitest::Test
     JS
   end
   
+  test "compile simple template with a forEach" do
+    result = EJX.compile(<<~DATA)
+      <% records.forEach((record) => { %>
+        <input type="text" >
+        <input type="submit" />
+      <% }); %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          records.forEach((record) => {
+          var __a = document.createElement("input");
+          __a.setAttribute("type", "text");
+          __ejx_append(__a, __output, false, __promises);
+          var __b = document.createElement("input");
+          __b.setAttribute("type", "submit");
+          __ejx_append(__b, __output, false, __promises);
+          });
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
   test "more complex compile" do
     result = EJX.compile(<<~JS)
       <form class="uniformForm">
