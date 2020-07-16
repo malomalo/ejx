@@ -51,6 +51,7 @@ class EJX::Template
           end
         end
       when :js
+        pre_js = pre_match
         scan_until(Regexp.new("(#{@js_close_tags.map{|s| Regexp.escape(s) }.join('|')})"))
         pm = pre_match
         open_modifier = @open_tag_modifiers.find { |k,v| pm.start_with?(v) }&.first
@@ -72,6 +73,9 @@ class EJX::Template
           @tree << EJX::Template::Subtemplate.new(pm.strip, [open_modifier, close_modifier].compact)
           @stack.pop
         else
+          if open_modifier != :comment && !pre_js.empty? && @tree.last.children.last.is_a?(EJX::Template::JS)
+            @tree.last.children << EJX::Template::String.new(' ')
+          end
           value = EJX::Template::JS.new(pm.strip, [open_modifier, close_modifier].compact)
 
           @stack.pop

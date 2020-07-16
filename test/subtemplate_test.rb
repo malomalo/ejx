@@ -46,6 +46,28 @@ class SubtemplateTest < Minitest::Test
     JS
   end
   
+  test "whitespace is preserved" do
+    result = EJX.compile(<<~DATA)
+      <%= 1 %>
+      <%= 2 %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __ejx_append(1, __output, true, __promises);
+          __output.push(" ");
+          __ejx_append(2, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
   test "a simple subtemplate with a if inside it" do
     result = EJX.compile(<<~DATA)
       <% formTag = function(template) {
