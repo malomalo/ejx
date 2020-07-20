@@ -20,6 +20,54 @@ class CompilationTest < Minitest::Test
     JS
   end
   
+  
+  test "whitespace is preserved" do
+    result = EJX.compile(<<~DATA)
+      <%= 1 %>
+      <%= 2 %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __ejx_append(1, __output, true, __promises);
+          __output.push(" ");
+          __ejx_append(2, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
+  
+  test "whitespace before a html tag is preserved" do
+    result = EJX.compile(<<~DATA)
+      <%= 1 %>
+      <span>span</span>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __ejx_append(1, __output, true, __promises);
+          __output.push(" ");
+          var __a = document.createElement("span");
+          __ejx_append("span", __a, false, __promises);
+          __ejx_append(__a, __output, false, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
   test "compile simple template with a forEach" do
     result = EJX.compile(<<~DATA)
       <% records.forEach((record) => { %>
@@ -35,6 +83,7 @@ class CompilationTest < Minitest::Test
           var __output = [], __promises = [];
           
           records.forEach((record) => {
+          __output.push(" ");
           var __a = document.createElement("input");
           __a.setAttribute("type", "text");
           __ejx_append(__a, __output, false, __promises);

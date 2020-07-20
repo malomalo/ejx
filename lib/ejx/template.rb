@@ -93,6 +93,10 @@ class EJX::Template
           end
         end
       when :html_tag
+        if @tree.last.children.last.is_a?(EJX::Template::JS)
+          @tree.last.children << EJX::Template::String.new(' ')
+        end
+
         scan_until(Regexp.new("(#{@js_start_tags.map{|s| Regexp.escape(s) }.join('|')}|\\/|[^\\s>]+)"))
         if @js_start_tags.include?(matched)
           @tree << EJX::Template::HTMLTag.new
