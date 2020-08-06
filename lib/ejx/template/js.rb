@@ -1,6 +1,8 @@
 class EJX::Template::JS
   
-  def initialize(value, modifiers)
+  attr_reader :value
+  
+  def initialize(value, modifiers = [])
     @modifiers = modifiers
     @value = value
   end

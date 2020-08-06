@@ -19,8 +19,8 @@ module EJX::Template::ParseHelpers
     @source[@old_index...(@index-@matched.size)]
   end
 
-  def rewind(by)
-    @index -= 1
+  def rewind(by=1)
+    @index -= by
   end
 
   def seek(pos)

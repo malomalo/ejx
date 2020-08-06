@@ -190,18 +190,42 @@ class EJX::Template
           @tree.last.attrs << { key => matched }
         end
       when :html_tag_attr_value_double_quoted
-        scan_until(/[^\"]*/)
+        quoted_value = []
+        scan_until(/("|\[\[=)/)
+        while matched == '[[='
+          quoted_value << pre_match if !pre_match.strip.empty?
+          scan_until(/\]\]/)
+          quoted_value << EJX::Template::JS.new(pre_match.strip)
+          scan_until(/("|\[\[=)/)
+        end
+        quoted_value << pre_match if !pre_match.strip.empty?
+        rewind(1)
+
+        quoted_value = EJX::Template::HTMLTag::AttributeValue.new(quoted_value)
+
         key = @tree.last.attrs.pop
-        @tree.last.namespace = matched if key == 'xmlns'
-        @tree.last.attrs << { key => matched }
+        @tree.last.namespace = quoted_value if key == 'xmlns'
+        @tree.last.attrs << { key => quoted_value }
         scan_until(/\"/)
         @stack.pop
       when :html_tag_attr_value_single_quoted
-        scan_until(/[^']*/)
+        quoted_value = []
+        scan_until(/('|\[\[=)/)
+        while matched == '[[='
+          quoted_value << pre_match if !pre_match.strip.empty?
+          scan_until(/\]\]/)
+          quoted_value << EJX::Template::JS.new(pre_match.strip)
+          scan_until(/('|\[\[=)/)
+        end
+        quoted_value << pre_match if !pre_match.strip.empty?
+        rewind(1)
+
+        quoted_value = EJX::Template::HTMLTag::AttributeValue.new(quoted_value)
+
         key = @tree.last.attrs.pop
-        @tree.last.namespace = matched if key == 'xmlns'
-        @tree.last.attrs << { key => matched }
-        scan_until(/'/)
+        @tree.last.namespace = quoted_value if key == 'xmlns'
+        @tree.last.attrs << { key => quoted_value }
+        scan_until(/\'/)
         @stack.pop
       end
     end

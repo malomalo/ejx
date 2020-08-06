@@ -1,4 +1,6 @@
 class EJX::Template::HTMLTag
+
+  autoload :AttributeValue, File.expand_path('../html_tag/attribute_value', __FILE__)
   
   attr_accessor :tag_name, :attrs, :children, :namespace
 
@@ -21,7 +23,7 @@ class EJX::Template::HTMLTag
     output_var = var_generator.next
     js = "#{' '*indentation}var #{output_var} = document.createElement"
     js << if namespace
-      "NS(#{JSON.generate(namespace)}, #{JSON.generate(tag_name)});\n"
+      "NS(#{namespace.to_js}, #{JSON.generate(tag_name)});\n"
     else
       "(#{JSON.generate(tag_name)});\n"
     end
@@ -29,7 +31,7 @@ class EJX::Template::HTMLTag
     @attrs.each do |attr|
       if attr.is_a?(Hash)
         attr.each do |k, v|
-          js << "#{' '*indentation}#{output_var}.setAttribute(#{JSON.generate(k)}, #{JSON.generate(v)});\n"
+          js << "#{' '*indentation}#{output_var}.setAttribute(#{JSON.generate(k)}, #{v.to_js});\n"
         end
       else
         js << "#{' '*indentation}#{output_var}.setAttribute(#{JSON.generate(attr)}, \"\");\n"
