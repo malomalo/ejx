@@ -29,18 +29,26 @@ class RuntimeTest < Minitest::Test
       import 'jsdom-global/register.js';
       import template from "#{template}";
 
+      var htmlEscapes = {
+        '&': '&amp',
+        '<': '&lt',
+        '>': '&gt',
+        '"': '&quot',
+        "'": '&#39'
+      }
+
       function toHTML(els) {
         if (Array.isArray(els)) {
           return els.map((i) => {
             if (typeof i === 'string') {
-              return i;
+              return i.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
             } else {
               return i.outerHTML;
             }
           });
         } else {
           if (typeof els === 'string') {
-            return els;
+            return els.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
           } else {
             return els.outerHTML;
           }
@@ -65,9 +73,9 @@ class RuntimeTest < Minitest::Test
 
   test "html tag value with interpolation in double quotes" do
     t1 = template('<div class="[[= locals.klass ]]"></div>')
-    assert_equal(['<div class="name"></div>'], render(t1, klass: 'name')) 
+    assert_equal(['<div class="name"></div>'], render(t1, klass: 'name'))
   end
-  
+
   test "rendering another template in a template" do
     t1 = template('<div>t1</div>')
     t2 = template(<<~JS)
@@ -75,14 +83,14 @@ class RuntimeTest < Minitest::Test
       <%= t1() %>
       <div>t2</div>
     JS
-    assert_equal(["<div>t1</div>", " ", "<div>t2</div>"], render(t2)) 
+    assert_equal(["<div>t1</div>", " ", "<div>t2</div>"], render(t2))
   end
-  
+
   test "rendering a template that has a promise" do
     t1 = template(<<~EJX)
       <div><%= new Promise( (resolve) => { setTimeout(resolve('hello world'), 200); } ) %></div>
     EJX
-    assert_equal(["<div>hello world </div>"], render(t1)) 
+    assert_equal(["<div>hello world </div>"], render(t1))
   end
 
   test "rendering another template that has a promise inside a template" do
@@ -93,7 +101,15 @@ class RuntimeTest < Minitest::Test
       <% import t1 from "#{t1}"; %>
       <%= t1() %> world
     EJX
-    assert_equal(["hello", " world"], render(t2)) 
+    assert_equal(["hello", " world"], render(t2))
+  end
+  
+  test "including an HTML string" do
+    t1 = template(<<~EJX)
+      <%= '<div>t1</div>' %>
+      <%- '<div>t2</div>' %>
+    EJX
+    assert_equal(["&ltdiv&gtt1&lt/div&gt", " ", "<div>t2</div>"], render(t1)) 
   end
 end
 
@@ -116,7 +132,6 @@ class Node
         scriptfile.flush
 
         stdout, stderr, status = Open3.capture3(binary, scriptfile.path)
-
 
         if status.success?
           STDERR.puts stderr if !stderr.empty?
@@ -161,12 +176,12 @@ class Node
     error
   end
 
-  def exec_runtime_error(output)
+  def exec_runtime_error(output, source_file)
     error = RuntimeError.new(output)
     lines = output.split("\n")
     lineno = lines[0][/:(\d+)$/, 1] if lines[0]
     lineno ||= 1
-    error.set_backtrace(["(node):#{lineno}"] + caller)
+    error.set_backtrace(["#{source_file}:#{lineno}"] + caller)
     error
   end
 
