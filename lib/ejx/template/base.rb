@@ -12,7 +12,7 @@ class EJX::Template::Base
     var_generator = EJX::Template::VarGenerator.new
     
     output = if @escape
-      "import {" + @escape.split('.').reverse.join(" as escape} from '") + "';\n"
+      "import {" + @escape.split('.').reverse.join(" as __ejx_append} from '") + "';\n"
     else
       "import {append as __ejx_append} from 'ejx';\n"
     end
