@@ -69,7 +69,7 @@ class EJX::Template
           subtemplate.children << pm.strip
           @tree.last.children << subtemplate
           @stack.pop
-        elsif open_modifier && (pm.match(/function\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m))
+        elsif pm.match(/function\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
           @tree << EJX::Template::Subtemplate.new(pm.strip, [open_modifier, close_modifier].compact)
           @stack.pop
         else

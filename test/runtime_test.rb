@@ -86,21 +86,39 @@ class RuntimeTest < Minitest::Test
     assert_equal(["<div>t1</div>", " ", "<div>t2</div>"], render(t2))
   end
 
-  test "rendering a template that has a promise" do
+  test "rendering a promise that returns a string in a template" do
     t1 = template(<<~EJX)
-      <div><%= new Promise( (resolve) => { setTimeout(resolve('hello world'), 200); } ) %></div>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 200); } ) %>
     EJX
-    assert_equal(["<div>hello world </div>"], render(t1))
+    assert_equal(["hello world"], render(t1))
+    
+    t2 = template(<<~EJX)
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 200); } ) %></div>
+    EJX
+    assert_equal(["<div>hello world </div>"], render(t2))
+  end
+  
+  test "rendering a promise that element a string in a template" do
+    t1 = template(<<~EJX)
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) }, 200); } ) %>
+    EJX
+    assert_equal(["<div></div>"], render(t1))
+    
+    t2 = template(<<~EJX)
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) } , 200); } ) %></div>
+    EJX
+    assert_equal(["<div><div></div> </div>"], render(t2))
   end
 
   test "rendering another template that has a promise inside a template" do
     t1 = template(<<~EJX)
-      <%= new Promise( (resolve) => { setTimeout(resolve('hello'), 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve('hello') }, 200); } ) %>
     EJX
     t2 = template(<<~EJX)
       <% import t1 from "#{t1}"; %>
       <%= t1() %> world
     EJX
+    assert_equal(["hello"], render(t1))
     assert_equal(["hello", " world"], render(t2))
   end
   
@@ -111,6 +129,24 @@ class RuntimeTest < Minitest::Test
     EJX
     assert_equal(["&ltdiv&gtt1&lt/div&gt", " ", "<div>t2</div>"], render(t1)) 
   end
+  
+  test "rendering a subtemplate in a promise" do
+    t1 = template(<<~EJX)
+      <% var formTag = function(template) {
+           return new Promise( (resolve) => { setTimeout(() => { resolve(template()) }, 200); } );
+         } %>
+
+      <form>
+      <% formTag(function () { %>
+        <input type="text" >
+        <input type="submit" />
+      <% }) %>
+      </form>
+    EJX
+    
+    assert_equal([' ', '<form><input type="text"><input type="submit"></form>'], render(t1)) 
+  end
+  
 end
 
 
@@ -142,10 +178,10 @@ class Node
             if result[0] == 'SyntaxError'
               raise exec_syntax_error(result[1], scriptfile.path)
             else
-              raise exec_runtime_error(result[0] + ': ' + result[1], scriptfile.path)
+              raise exec_runtime_error(result[0] + ': ' + result[1], scriptfile)
             end
           rescue JSON::ParserError
-            raise exec_runtime_error(stdout + stderr)
+            raise exec_runtime_error(stdout + stderr, script)
           end
         end
       end

@@ -27,7 +27,7 @@ class EJX::Template::Subtemplate
     
     output << ' '*(indentation+4) << "#{global_output_var}.push(#{output_var});\n";
     output << ' '*(indentation+4) << "return #{output_var};\n";
-    output << ' '*indentation << @children.last
+    output << ' '*indentation << @children.last.strip.delete_suffix(';')
     output << ", #{append}, true, __promises, #{global_output_var});\n"
 
     output
