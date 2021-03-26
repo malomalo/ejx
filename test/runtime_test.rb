@@ -42,6 +42,8 @@ class RuntimeTest < Minitest::Test
           return els.map((i) => {
             if (typeof i === 'string') {
               return i.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
+            } else if (i instanceof Text) {
+              return i.textContent;
             } else {
               return i.outerHTML;
             }
@@ -49,6 +51,8 @@ class RuntimeTest < Minitest::Test
         } else {
           if (typeof els === 'string') {
             return els.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
+          } else if (i instanceof Text) {
+            return i.textContent;
           } else {
             return els.outerHTML;
           }
@@ -91,23 +95,35 @@ class RuntimeTest < Minitest::Test
       <%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 200); } ) %>
     EJX
     assert_equal(["hello world"], render(t1))
-    
+
     t2 = template(<<~EJX)
       <div><%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 200); } ) %></div>
     EJX
     assert_equal(["<div>hello world </div>"], render(t2))
   end
-  
-  test "rendering a promise that element a string in a template" do
+
+  test "rendering a promise that element in a template" do
     t1 = template(<<~EJX)
       <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) }, 200); } ) %>
     EJX
     assert_equal(["<div></div>"], render(t1))
-    
+
     t2 = template(<<~EJX)
       <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) } , 200); } ) %></div>
     EJX
     assert_equal(["<div><div></div> </div>"], render(t2))
+  end
+
+  test "rendering a promise that returns a Text Node in a template" do
+    t1 = template(<<~EJX)
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 200); } ) %>
+    EJX
+    assert_equal(["my text node"], render(t1))
+    
+    t2 = template(<<~EJX)
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 200); } ) %></div>
+    EJX
+    assert_equal(["<div>my text node </div>"], render(t2))
   end
 
   test "rendering another template that has a promise inside a template" do
@@ -121,15 +137,15 @@ class RuntimeTest < Minitest::Test
     assert_equal(["hello"], render(t1))
     assert_equal(["hello", " world"], render(t2))
   end
-  
+
   test "including an HTML string" do
     t1 = template(<<~EJX)
       <%= '<div>t1</div>' %>
       <%- '<div>t2</div>' %>
     EJX
-    assert_equal(["&ltdiv&gtt1&lt/div&gt", " ", "<div>t2</div>"], render(t1)) 
+    assert_equal(["&ltdiv&gtt1&lt/div&gt", " ", "<div>t2</div>"], render(t1))
   end
-  
+
   test "rendering a subtemplate in a promise" do
     t1 = template(<<~EJX)
       <% var formTag = function(template) {
@@ -143,8 +159,8 @@ class RuntimeTest < Minitest::Test
       <% }) %>
       </form>
     EJX
-    
-    assert_equal([' ', '<form><input type="text"><input type="submit"></form>'], render(t1)) 
+
+    assert_equal([' ', '<form><input type="text"><input type="submit"></form>'], render(t1))
   end
   
 end
