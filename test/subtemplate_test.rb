@@ -46,6 +46,40 @@ class SubtemplateTest < Minitest::Test
     JS
   end
   
+  test "multiple subtemplates" do
+    result = EJX.compile(<<~DATA)
+      <%= render( x => { %>
+        <%= x %>
+      <% }, x => { %>
+        <%= x %>
+      <% }) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          formTag = function(template) {
+            var a = document.createElement("form");
+            a.append.apply(a, template());
+            return a;
+        }
+          var __a = [];
+          __ejx_append(formTag(function () {
+              var __b = [];
+              __ejx_append(x, __b, true, __promises);
+              __a.push(__b);
+              return __b;
+          }), __output, true, __promises, __a);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
   test "a simple subtemplate with a if inside it" do
     result = EJX.compile(<<~DATA)
       <% formTag = function(template) {
