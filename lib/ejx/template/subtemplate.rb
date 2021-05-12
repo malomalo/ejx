@@ -1,19 +1,26 @@
 class EJX::Template::Subtemplate
 
-  attr_reader :children
+  attr_reader :children, :append
   
-  def initialize(opening, modifiers)
+  def initialize(opening, modifiers, append: true)
     @children = [opening]
     @modifiers = modifiers
+    @append = append
   end
 
   def to_js(indentation: 4, var_generator: nil, append: "__output")
     global_output_var = var_generator.next
     output_var = var_generator.next
     
-    output =  "#{' '*indentation}var #{global_output_var} = [];\n"
-    output << "#{' '*indentation}__ejx_append("
-    output << @children.first << "\n"
+    output = ''
+    if @append
+      output << "#{' '*indentation}var #{global_output_var} = [];\n"
+      output << "#{' '*indentation}__ejx_append("
+      output << @children.first << "\n"
+    else
+      output << "#{' '*indentation}#{@children.first}\n"
+    end
+
     output << "#{' '*(indentation+4)}var #{output_var} = [];\n"
     
     @children[1..-2].each do |child|
@@ -25,10 +32,14 @@ class EJX::Template::Subtemplate
       end
     end
     
-    output << ' '*(indentation+4) << "#{global_output_var}.push(#{output_var});\n";
+    output << ' '*(indentation+4) << "#{global_output_var}.push(#{output_var});\n" if @append
     output << ' '*(indentation+4) << "return #{output_var};\n";
     output << ' '*indentation << @children.last.strip.delete_suffix(';')
-    output << ", #{append}, true, __promises, #{global_output_var});\n"
+    output << if @append
+      ", #{append}, true, __promises, #{global_output_var});\n"
+    else
+      ";\n"
+    end
 
     output
   end

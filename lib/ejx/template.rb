@@ -70,7 +70,7 @@ class EJX::Template
           @tree.last.children << subtemplate
           @stack.pop
         elsif pm.match(/function\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
-          @tree << EJX::Template::Subtemplate.new(pm.strip, [open_modifier, close_modifier].compact)
+          @tree << EJX::Template::Subtemplate.new(pm.strip, [open_modifier, close_modifier].compact, append: !pm.match?(/\A\s*(var|const|let)?\s*[^(]+\s*=/))
           @stack.pop
         else
           if open_modifier != :comment && !pre_js.empty? && @tree.last.children.last.is_a?(EJX::Template::JS)

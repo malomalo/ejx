@@ -169,4 +169,30 @@ class SubtemplateTest < Minitest::Test
     JS
   end
   
+  test "a subtemplate that assigns to a var" do
+    result = EJX.compile(<<~DATA)
+      <% var x = [1,2].map((n) => { %>
+        <input type="text" >
+      <% }) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          var x = [1,2].map((n) => {
+              var __b = [];
+              var __c = document.createElement("input");
+              __c.setAttribute("type", "text");
+              __ejx_append(__c, __b, false, __promises);
+              return __b;
+          });
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
 end

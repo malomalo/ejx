@@ -44,6 +44,8 @@ class RuntimeTest < Minitest::Test
               return i.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
             } else if (i instanceof Text) {
               return i.textContent;
+            } else if (Array.isArray(i)) {
+              return toHTML(i);
             } else {
               return i.outerHTML;
             }
@@ -112,6 +114,30 @@ class RuntimeTest < Minitest::Test
       <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) } , 200); } ) %></div>
     EJX
     assert_equal(["<div><div></div> </div>"], render(t2))
+  end
+
+  test "rendering a promise that returns an array of elements in a template" do
+    t1 = template(<<~EJX)
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) }, 200); } ) %>
+    EJX
+    assert_equal(["<div></div>", "<div></div>"], render(t1))
+
+    t2 = template(<<~EJX)
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) } , 200); } ) %></div>
+    EJX
+    assert_equal(["<div><div></div><div></div> </div>"], render(t2))
+  end
+  
+  test "rendering a promise that returns an nested array of elements in a template" do
+    t1 = template(<<~EJX)
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve([[document.createElement("div"), document.createElement("div")]]) }, 200); } ) %>
+    EJX
+    assert_equal([["<div></div>", "<div></div>"]], render(t1))
+
+    t2 = template(<<~EJX)
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve([[document.createElement("div"), document.createElement("div")]]) } , 200); } ) %></div>
+    EJX
+    assert_equal(["<div><div></div><div></div> </div>"], render(t2))
   end
 
   test "rendering a promise that returns a Text Node in a template" do

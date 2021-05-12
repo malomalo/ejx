@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
   s.files       = Dir["README.md", "LICENSE", "lib/**/*.{rb,js}"]
 
   s.add_development_dependency "rake"
+  s.add_development_dependency "byebug"
   s.add_development_dependency "bundler"
   s.add_development_dependency "minitest"
   s.add_development_dependency "minitest-reporters"

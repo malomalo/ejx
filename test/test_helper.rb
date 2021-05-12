@@ -1,11 +1,15 @@
+require 'byebug'
 require "minitest/autorun"
 require 'minitest/reporters'
 require "ejx"
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new
 
+$debug = false
+
 # File 'lib/active_support/testing/declarative.rb', somewhere in rails....
 class Minitest::Test
+
   def self.test(name, &block)
     test_name = "test_#{name.gsub(/\s+/,'_')}".to_sym
     defined = instance_method(test_name) rescue false
@@ -19,6 +23,15 @@ class Minitest::Test
     end
   end
 
+  def debug
+    $debug = true
+    puts '='*80
+    yield
+  ensure
+    puts '='*80
+    $debug = false
+  end
+  
   # test/unit backwards compatibility methods
   alias :assert_raise :assert_raises
   alias :assert_not_empty :refute_empty
