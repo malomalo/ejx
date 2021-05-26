@@ -11,7 +11,11 @@ class EJX::Template::JS
     output = @value
     
     if @modifiers.include? :escape
-      "#{' '*indentation}__ejx_append(#{output}, #{append}, true, __promises);\n"
+      if output =~ /\s*(var|const|let)\s+(\S)/
+        "#{' '*indentation}#{output}#{output.strip.end_with?(';') ? '' : ';'}\n#{' '*indentation}__ejx_append(#{$2}, #{append}, true, __promises);\n"
+      else
+        "#{' '*indentation}__ejx_append(#{output}, #{append}, true, __promises);\n"
+      end
     elsif @modifiers.include? :unescape
       "#{' '*indentation}__ejx_append(#{output}, #{append}, false, __promises);\n"
     elsif !@modifiers.include? :comment

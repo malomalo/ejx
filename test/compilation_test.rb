@@ -20,7 +20,6 @@ class CompilationTest < Minitest::Test
     JS
   end
   
-  
   test "whitespace is preserved" do
     result = EJX.compile(<<~DATA)
       <%= 1 %>
@@ -42,7 +41,6 @@ class CompilationTest < Minitest::Test
       }
     JS
   end
-  
   
   test "whitespace before a html tag is preserved" do
     result = EJX.compile(<<~DATA)
@@ -94,6 +92,114 @@ class CompilationTest < Minitest::Test
               __a.push(__b);
               return __b;
           }), __output, true, __promises, __a);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+
+  test "outputing a var" do
+    result = EJX.compile("Hello <%= var x = 2; %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          var x = 2;
+          __ejx_append(x, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+    
+    result = EJX.compile("Hello <%= var x = 2 %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          var x = 2;
+          __ejx_append(x, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
+  test "outputing a let" do
+    result = EJX.compile("Hello <%= let x = 2; %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          let x = 2;
+          __ejx_append(x, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+    
+    result = EJX.compile("Hello <%= let x = 2 %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          let x = 2;
+          __ejx_append(x, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
+  test "outputing a const" do
+    result = EJX.compile("Hello <%= const x = 2; %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          const x = 2;
+          __ejx_append(x, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+    
+    result = EJX.compile("Hello <%= const x = 2 %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          const x = 2;
+          __ejx_append(x, __output, true, __promises);
 
           await Promise.all(__promises);
           return __output;
