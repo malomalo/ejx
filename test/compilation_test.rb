@@ -207,6 +207,25 @@ class CompilationTest < Minitest::Test
     JS
   end
   
+  test "outputing normally with a var/const/let in the string" do
+    result = EJX.compile("Hello <%= el(() => { var x = 2; let y = 3; const z = 4; return 5; } %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          __ejx_append(el(() => { var x = 2; let y = 3; const z = 4; return 5; }, __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+
+  
   test "more complex compile" do
     result = EJX.compile(<<~JS)
       <form class="uniformForm">
