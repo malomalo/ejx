@@ -20,6 +20,8 @@ class EJX::Template::JS
       "#{' '*indentation}__ejx_append(#{output}, #{append}, false, __promises);\n"
     elsif !@modifiers.include? :comment
       "#{' '*indentation}#{output}\n"
+    else
+      "#{' '*indentation}//#{output}\n"
     end
   end
 end

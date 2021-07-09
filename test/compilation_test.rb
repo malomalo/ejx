@@ -19,7 +19,25 @@ class CompilationTest < Minitest::Test
       }
     JS
   end
-  
+
+  test "compile with js comment" do
+    result = EJX.compile("Hello <%# name %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          //name
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+
   test "whitespace is preserved" do
     result = EJX.compile(<<~DATA)
       <%= 1 %>
