@@ -135,7 +135,7 @@ class CompilationTest < Minitest::Test
       }
     JS
     
-    result = EJX.compile("Hello <%= var x = 2 %>")
+    result = EJX.compile("Hello <%= var longer_var_name = 2 %>")
     
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
@@ -144,8 +144,8 @@ class CompilationTest < Minitest::Test
           var __output = [], __promises = [];
           
           __output.push("Hello ");
-          var x = 2;
-          __ejx_append(x, __output, true, __promises);
+          var longer_var_name = 2;
+          __ejx_append(longer_var_name, __output, true, __promises);
 
           await Promise.all(__promises);
           return __output;
