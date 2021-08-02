@@ -30,7 +30,34 @@ class CompilationTest < Minitest::Test
           var __output = [], __promises = [];
           
           __output.push("Hello ");
-          //name
+          // name
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
+  test "compile with js multiline comment" do
+    result = EJX.compile(<<~JS)
+      Hello <%# a
+          multi
+          line
+          comment
+      %>
+    JS
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          /* a
+             multi
+             line
+             comment */
 
           await Promise.all(__promises);
           return __output;

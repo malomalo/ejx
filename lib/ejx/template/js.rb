@@ -18,10 +18,10 @@ class EJX::Template::JS
       end
     elsif @modifiers.include? :unescape
       "#{' '*indentation}__ejx_append(#{output}, #{append}, false, __promises);\n"
-    elsif !@modifiers.include? :comment
-      "#{' '*indentation}#{output}\n"
+    elsif @modifiers.include? :comment
+      "#{' '*indentation}#{output.index("\n").nil? ? "// #{output}" : "/* #{output.gsub(/\n\s+/, "\n"+(' '*indentation)+"   ")} */"}\n"
     else
-      "#{' '*indentation}//#{output}\n"
+      "#{' '*indentation}#{output}\n"
     end
   end
 end
