@@ -29,6 +29,10 @@ module EJX::Template::ParseHelpers
     @index = pos
   end
 
+  def peek(n=1)
+    @source.slice(@index, n)
+  end
+  
   def current_line
     start = (@source.rindex("\n", @old_index) || 0) + 1
     uptop = @source.index("\n", @index) || (@old_index + @matched.length)

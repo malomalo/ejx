@@ -4,6 +4,7 @@ class EJX::Template
   autoload :Base, File.expand_path('../template/base', __FILE__)
   autoload :String, File.expand_path('../template/string', __FILE__)
   autoload :HTMLTag, File.expand_path('../template/html_tag', __FILE__)
+  autoload :HTMLComment, File.expand_path('../template/html_comment', __FILE__)
   autoload :ParseHelpers, File.expand_path('../template/parse_helpers', __FILE__)
   autoload :Subtemplate, File.expand_path('../template/subtemplate', __FILE__)
   autoload :VarGenerator, File.expand_path('../template/var_generator', __FILE__)
@@ -44,7 +45,10 @@ class EJX::Template
         end
         
         if !matched.nil?
-          if @js_start_tags.include?(matched)
+          if peek(3) == '!--'
+            scan_until('!--')
+            @stack << :html_comment
+          elsif @js_start_tags.include?(matched)
             @stack << :js
           elsif @html_start_tags.include?(matched)
             @stack << :html_tag
@@ -226,6 +230,10 @@ class EJX::Template
         @tree.last.namespace = quoted_value if key == 'xmlns'
         @tree.last.attrs << { key => quoted_value }
         scan_until(/\'/)
+        @stack.pop
+      when :html_comment
+        scan_until('-->')
+        @tree.last.children << EJX::Template::HTMLComment.new(pre_match)
         @stack.pop
       end
     end
