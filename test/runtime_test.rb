@@ -39,29 +39,22 @@ class RuntimeTest < Minitest::Test
 
       function toHTML(els) {
         if (Array.isArray(els)) {
-          return els.map((i) => {
-            if (typeof i === 'string') {
-              return i.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
-            } else if (i instanceof Text) {
-              return i.textContent;
-            } else if (Array.isArray(i)) {
-              return toHTML(i);
-            } else {
-              return i.outerHTML;
-            }
-          });
+          return els.map((i) => toHTML(i))
         } else {
           if (typeof els === 'string') {
             return els.replace(/[&<>"']/g, (chr) => htmlEscapes[chr])
-          } else if (i instanceof Text) {
-            return i.textContent;
-          } else {
+          } else if (els instanceof Text) {
+            return els.textContent;
+          } else if (els instanceof Element || els instanceof Node) {
             return els.outerHTML;
+          } else {
+            return els
           }
         }
       }
       
       let result = template(#{JSON.generate(locals)})
+
       if (result instanceof Promise) {
         result.then((result) => {
           console.log(JSON.stringify({result: toHTML(result)}));
@@ -127,7 +120,7 @@ class RuntimeTest < Minitest::Test
     EJX
     assert_equal(["<div><div></div><div></div> </div>"], render(t2))
   end
-  
+
   test "rendering a promise that returns an nested array of elements in a template" do
     t1 = template(<<~EJX)
       <%= new Promise( (resolve) => { setTimeout(() => { resolve([[document.createElement("div"), document.createElement("div")]]) }, 200); } ) %>
@@ -145,7 +138,7 @@ class RuntimeTest < Minitest::Test
       <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 200); } ) %>
     EJX
     assert_equal(["my text node"], render(t1))
-    
+
     t2 = template(<<~EJX)
       <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 200); } ) %></div>
     EJX
@@ -189,6 +182,13 @@ class RuntimeTest < Minitest::Test
     assert_equal([' ', '<form><input type="text"><input type="submit"></form>'], render(t1))
   end
   
+  test "a iterater subtemplate" do
+    t1 = template(<<~EJX)
+      <% [1,2].forEach((i) => { %><%= i %><% }) %>
+    EJX
+
+    assert_equal([1,2], render(t1))
+  end
 end
 
 

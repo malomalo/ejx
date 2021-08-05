@@ -45,7 +45,34 @@ class SubtemplateTest < Minitest::Test
       }
     JS
   end
-  
+
+  test "a iterater subtemplate" do
+    result = EJX.compile(<<~DATA)
+      <% [1,2].forEach((i) => { %>
+        <%= i %>
+      <% }) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          var __a = [];
+          __ejx_append([1,2].forEach((i) => {
+              var __b = [];
+              __ejx_append(i, __b, true, __promises);
+              __a.push(__b);
+              return __b;
+          }), __output, true, __promises, __a);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+
   test "a simple subtemplate with a if inside it" do
     result = EJX.compile(<<~DATA)
       <% formTag = function(template) {
