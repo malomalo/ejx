@@ -14,10 +14,10 @@ class EJX::Template::JS
       if output =~ /\A\s*(var|const|let)\s+(\S+)/
         "#{' '*indentation}#{output}#{output.strip.end_with?(';') ? '' : ';'}\n#{' '*indentation}__ejx_append(#{$2}, #{append}, true, __promises);\n"
       else
-        "#{' '*indentation}__ejx_append(#{output}, #{append}, true, __promises);\n"
+        "#{' '*indentation}__ejx_append(#{output.gsub(/;\s*\Z/, '')}, #{append}, true, __promises);\n"
       end
     elsif @modifiers.include? :unescape
-      "#{' '*indentation}__ejx_append(#{output}, #{append}, false, __promises);\n"
+      "#{' '*indentation}__ejx_append(#{output.gsub(/;\s*\Z/, '')}, #{append}, false, __promises);\n"
     elsif @modifiers.include? :comment
       "#{' '*indentation}#{output.index("\n").nil? ? "// #{output}" : "/* #{output.gsub(/\n\s+/, "\n"+(' '*indentation)+"   ")} */"}\n"
     else

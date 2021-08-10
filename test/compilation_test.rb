@@ -163,6 +163,24 @@ class CompilationTest < Minitest::Test
     JS
   end
 
+  test "outputing a function with a trailing ;" do
+    result = EJX.compile("Hello <%= x(); %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          __ejx_append(x(), __output, true, __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+
   test "outputing a var" do
     result = EJX.compile("Hello <%= var x = 2; %>")
     
