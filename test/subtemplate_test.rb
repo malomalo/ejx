@@ -210,12 +210,42 @@ class SubtemplateTest < Minitest::Test
           var __output = [], __promises = [];
           
           var x = [1,2].map((n) => {
-              var __b = [];
-              var __c = document.createElement("input");
-              __c.setAttribute("type", "text");
-              __ejx_append(__c, __b, false, __promises);
-              return __b;
+              var __a = [];
+              var __b = document.createElement("input");
+              __b.setAttribute("type", "text");
+              __ejx_append(__b, __a, false, __promises);
+              return __a;
           });
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
+  test "output a subtemplate that assigns to a const" do
+    result = EJX.compile(<<~DATA)
+      <%= const table = createElement('table', {children: () => { %>
+          <tr><td>Hello World</td></tr>
+      <% }}) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          const table = createElement('table', {children: () => {
+              var __a = [];
+              var __b = document.createElement("tr");
+              var __c = document.createElement("td");
+              __ejx_append("Hello World", __c, false, __promises);
+              __ejx_append(__c, __b, false, __promises);
+              __ejx_append(__b, __a, false, __promises);
+              return __a;
+          }});
+          __ejx_append(table, __output, true, __promises);
 
           await Promise.all(__promises);
           return __output;
