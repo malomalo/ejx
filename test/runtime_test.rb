@@ -133,6 +133,17 @@ class RuntimeTest < Minitest::Test
     assert_equal(["<div><div></div><div></div> </div>"], render(t2))
   end
 
+  test "rendering a promise that returns a undefined" do
+    t1 = template(<<~EJX)
+    Hello
+    <span>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve(undefined) }, 200); } ) %>
+    </span>
+    World
+    EJX
+    assert_equal(["Hello\n", "<span> </span>", "\nWorld"], render(t1))
+  end
+
   test "rendering a promise that returns a Text Node in a template" do
     t1 = template(<<~EJX)
       <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 200); } ) %>
