@@ -7,6 +7,7 @@ class EJX::Template
   autoload :HTMLComment, File.expand_path('../template/html_comment', __FILE__)
   autoload :ParseHelpers, File.expand_path('../template/parse_helpers', __FILE__)
   autoload :Subtemplate, File.expand_path('../template/subtemplate', __FILE__)
+  autoload :Multitemplate, File.expand_path('../template/multitemplate', __FILE__)
   autoload :VarGenerator, File.expand_path('../template/var_generator', __FILE__)
   
   include EJX::Template::ParseHelpers
@@ -68,13 +69,31 @@ class EJX::Template
           import += ';' if !import.end_with?(';')
           @tree.first.imports << import
           @stack.pop
-        elsif @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}.*\)/m) && !pm.match(/\A\s*\}.*\{\s*\Z/m)
+        elsif @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}.*\)/m) && !pm.match(/\{\s*\Z/m)
           subtemplate = @tree.pop
-          subtemplate.children << pm.strip
-          @tree.last.children << subtemplate
+          if @tree.last.is_a?(EJX::Template::Multitemplate)
+            multitemplate = @tree.pop
+            multitemplate.children << subtemplate << pm.strip
+            @tree.last.children << multitemplate
+          else
+            subtemplate.children << pm.strip
+            @tree.last.children << subtemplate
+          end
           @stack.pop
         elsif pm.match(/function\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
-          @tree << EJX::Template::Subtemplate.new(pm.strip, [open_modifier, close_modifier].compact, append: [:escape, :unescape].include?(open_modifier) || !pm.match?(/\A\s*(var|const|let)?\s*[^(]+\s*=/))
+          if @tree.last.is_a?(EJX::Template::Subtemplate)
+            template = @tree.pop
+            @tree << EJX::Template::Multitemplate.new(template.children.shift, template.modifiers, append: template.append)
+            subtemplate = EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
+            subtemplate.children.push(*template.children)
+            @tree.last.children << subtemplate << pm.strip
+            @tree << EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
+          elsif @tree.last.is_a?(EJX::Template::Multitemplate)
+            @tree.last.children << pm.strip
+            @tree.last.children << EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
+          else
+            @tree << EJX::Template::Subtemplate.new(pm.strip, [open_modifier, close_modifier].compact, append: [:escape, :unescape].include?(open_modifier) || !pm.match?(/\A\s*(var|const|let)?\s*[^(]+\s*=/))
+          end
           @stack.pop
         else
           if open_modifier != :comment && !pre_js.empty? && @tree.last.children.last.is_a?(EJX::Template::JS)

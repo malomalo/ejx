@@ -1,6 +1,6 @@
 class EJX::Template::Subtemplate
 
-  attr_reader :children, :append
+  attr_reader :children, :append, :modifiers
   
   def initialize(opening, modifiers, append: true)
     @children = [opening]
@@ -51,6 +51,24 @@ class EJX::Template::Subtemplate
         ";\n"
       end
     end
+
+    output
+  end
+  
+  def to_sub_js(indentation: 4, var_generator: nil)
+    output_var = var_generator.next
+    
+    output = "#{' '*(indentation)}var #{output_var} = [];\n"
+
+    @children[1..-1].each do |child|
+      output << case child
+      when EJX::Template::String
+        "#{' '*(indentation)}__ejx_append(#{child.to_js}, #{output_var}, false, __promises);\n"
+      else
+        child.to_js(indentation: indentation, var_generator: var_generator, append: output_var)
+      end
+    end
+    output << ' '*(indentation) << "return #{output_var};\n";
 
     output
   end
