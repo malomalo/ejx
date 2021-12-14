@@ -258,6 +258,50 @@ class SubtemplateTest < Minitest::Test
     JS
   end
   
+  test "nested subtemplates" do
+    result = EJX.compile(<<~DATA)
+      <%= listenToRender(search, ['select', 'search'], selection => { %>
+          <%= new Form(address, f => { %>
+            <div class="">
+                <%= f.label('local_part', 'Street', {class:'text-bold block'}) %>
+                <%= f.text('local_part', {class:'uniformInput width-full'}) %>
+            </div>
+          <% }) %>
+      <% }) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+    import {append as __ejx_append} from 'ejx';
+
+    export default async function (locals) {
+        var __output = [], __promises = [];
+        
+        var __a = [];
+        __ejx_append(listenToRender(search, ['select', 'search'], selection => {
+            var __b = [];
+            var __c = [];
+            __ejx_append(new Form(address, f => {
+                var __d = [];
+                var __e = document.createElement("div");
+                __e.setAttribute("class", "");
+                __ejx_append(f.label('local_part', 'Street', {class:'text-bold block'}), __e, true, __promises);
+                __ejx_append(" ", __e, false, __promises);
+                __ejx_append(f.text('local_part', {class:'uniformInput width-full'}), __e, true, __promises);
+                __ejx_append(" ", __e, false, __promises);
+                __ejx_append(__e, __d, false, __promises);
+                __c.push(__d);
+                return __d;
+            }), __b, true, __promises, __c);
+            __a.push(__b);
+            return __b;
+        }), __output, true, __promises, __a);
+
+        await Promise.all(__promises);
+        return __output;
+    }
+    JS
+  end
+  
   test "output a subtemplate that assigns to a const" do
     result = EJX.compile(<<~DATA)
       <%= const table = createElement('table', {children: () => { %>

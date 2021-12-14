@@ -81,14 +81,14 @@ class EJX::Template
           end
           @stack.pop
         elsif pm.match(/function\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
-          if @tree.last.is_a?(EJX::Template::Subtemplate)
+          if @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}/m)
             template = @tree.pop
             @tree << EJX::Template::Multitemplate.new(template.children.shift, template.modifiers, append: template.append)
             subtemplate = EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
             subtemplate.children.push(*template.children)
             @tree.last.children << subtemplate << pm.strip
             @tree << EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
-          elsif @tree.last.is_a?(EJX::Template::Multitemplate)
+          elsif @tree.last.is_a?(EJX::Template::Multitemplate) && pm.match(/\A\s*\}/m)
             @tree.last.children << pm.strip
             @tree.last.children << EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
           else
