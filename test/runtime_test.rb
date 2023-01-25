@@ -210,6 +210,17 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
+  
+  test "an iterater that is a promise" do
+    t1 = template(<<~EJX)
+      <% const collection = {forEach: template => new Promise(r => r([1,2].forEach(template)))} %>
+      <% collection.forEach(async (i) => { %>
+        <span><%= await i %></span>
+      <% }) %>
+    EJX
+    
+    assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
+  end
 end
 
 
