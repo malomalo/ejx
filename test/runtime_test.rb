@@ -200,6 +200,16 @@ class RuntimeTest < Minitest::Test
 
     assert_equal([1,2], render(t1))
   end
+  
+  test "an iterater with an async subtemplate" do
+    t1 = template(<<~EJX)
+      <% [new Promise(r => r(1)),2].forEach(async (i) => { %>
+        <span><%= await i %></span>
+      <% }) %>
+    EJX
+
+    assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
+  end
 end
 
 

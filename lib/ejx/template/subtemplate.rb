@@ -10,6 +10,7 @@ class EJX::Template::Subtemplate
 
   def to_js(indentation: 4, var_generator: nil, append: "__output")
     output = ''
+    async_for_each = @children.first =~ /async\s+function\s*\([^\)]*\)\s*\{\s*\Z/m || @children.first =~ /async(\s*\([^\)]*\)|\s+\S+)?\s*=>\s*\{/m
     already_assigned = @children.first =~ /\A\s*(var|const|let)\s+(\S+)/
     global_output_var = already_assigned ? $2 : var_generator.next
     output_var = var_generator.next
@@ -23,6 +24,17 @@ class EJX::Template::Subtemplate
     end
 
     output << "#{' '*(indentation+4)}var #{output_var} = [];\n"
+    if async_for_each
+      indentation += 4
+      output << "#{' '*(indentation)}var resolve, error;\n"
+      output << "#{' '*(indentation)}var thisPromise = new Promise((r, e) => {\n"
+      output << "#{' '*(indentation+2)}resolve = r;\n"
+      output << "#{' '*(indentation+2)}error = e;\n"
+      output << "#{' '*(indentation)}});\n"
+      output << "#{' '*(indentation)}__promises.push(thisPromise);\n"
+      output << ' '*(indentation) << "try {\n";
+    end
+    
     @children[1..-2].each do |child|
       output << case child
       when EJX::Template::String
@@ -35,8 +47,17 @@ class EJX::Template::Subtemplate
     if !already_assigned
       output << ' '*(indentation+4) << "#{global_output_var}.push(#{output_var});\n" if @append
     end
-    output << ' '*(indentation+4) << "return #{output_var};\n";
+    if async_for_each
+      output << ' '*(indentation+4) << "resolve()\n";
+      output << ' '*(indentation) << "} catch (e) {\n";
+      output << ' '*(indentation+4) << "error(e)\n";
+      output << ' '*(indentation) << "}\n";
+      indentation -= 4
+    else
+      output << ' '*(indentation+4) << "return #{output_var};\n";
+    end
     output << ' '*indentation << @children.last.strip.delete_suffix(';')
+    
     
     output << if already_assigned
       if @append
