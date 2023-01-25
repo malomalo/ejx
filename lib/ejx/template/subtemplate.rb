@@ -53,9 +53,8 @@ class EJX::Template::Subtemplate
       output << ' '*(indentation+4) << "error(e)\n";
       output << ' '*(indentation) << "}\n";
       indentation -= 4
-    else
-      output << ' '*(indentation+4) << "return #{output_var};\n";
     end
+    output << ' '*(indentation+4) << "return #{output_var};\n";
     output << ' '*indentation << @children.last.strip.delete_suffix(';')
     
     

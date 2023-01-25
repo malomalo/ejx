@@ -102,6 +102,7 @@ class SubtemplateTest < Minitest::Test
             } catch (e) {
                 error(e)
             }
+            return __b;
         }), __output, true, __promises, __a);
 
         await Promise.all(__promises);

@@ -192,16 +192,60 @@ class RuntimeTest < Minitest::Test
 
     assert_equal([' ', '<form><input type="text"><input type="submit"></form>'], render(t1))
   end
-  
-  test "a iterater subtemplate" do
+
+  test "a forEach subtemplate" do
     t1 = template(<<~EJX)
       <% [1,2].forEach((i) => { %><%= i %><% }) %>
     EJX
 
     assert_equal([1,2], render(t1))
   end
-  
-  test "an iterater with an async subtemplate" do
+
+  test "a map subtemplate" do
+    t1 = template(<<~EJX)
+      <%= [1,2].map((i) => { %><%= i %><% }) %>
+    EJX
+
+    assert_equal([1,2], render(t1))
+  end
+
+  test "a nested iterater subtemplate" do
+    t1 = template(<<~EJX)
+      <% const array = [[1,2], [3,4]] %>
+      <table>
+      <% array.forEach((row) => { %>
+        <tr>
+        <% row.forEach(cell => { %>
+          <td><%= cell %></td>
+        <% }) %>
+        </tr>
+      <% }) %>
+      </table>
+    EJX
+
+    assert_equal([" ", "<table><tr><td>1 </td><td>2 </td></tr><tr><td>3 </td><td>4 </td></tr></table>"], render(t1))
+  end
+
+  test "a nested async iterater subtemplate" do
+    t1 = template(<<~EJX)
+      <% const matrix = [new Promise(x => x([new Promise(r => r(1)),2])), {
+        forEach: iterator => [3,new Promise(r => r(4))].forEach(iterator)
+      }] %>
+      <table>
+      <% matrix.forEach(async (row) => { %>
+        <tr>
+        <% (await row).forEach(async cell => { %>
+          <td><%= await cell %></td>
+        <% }) %>
+        </tr>
+      <% }) %>
+      </table>
+    EJX
+
+    assert_equal([" ", "<table><tr><td>1 </td><td>2 </td></tr><tr><td>3 </td><td>4 </td></tr></table>"], render(t1))
+  end
+
+  test "an forEach with an async subtemplate" do
     t1 = template(<<~EJX)
       <% [new Promise(r => r(1)),2].forEach(async (i) => { %>
         <span><%= await i %></span>
@@ -211,6 +255,16 @@ class RuntimeTest < Minitest::Test
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
   
+  test "an map with an async subtemplate" do
+    t1 = template(<<~EJX)
+      <%= [new Promise(r => r(1)),2].map(async (i) => { %>
+        <span><%= await i %></span>
+      <% }) %>
+    EJX
+
+    assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
+  end
+
   test "an iterater that is a promise" do
     t1 = template(<<~EJX)
       <% const collection = {forEach: template => new Promise(r => r([1,2].forEach(template)))} %>
