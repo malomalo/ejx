@@ -14,7 +14,7 @@ class EJX::Template::Multitemplate < EJX::Template::Subtemplate
     @children[1..-2].each do |child|
       output << case child
       when EJX::Template::String
-        "#{' '*(indentation+4)}__ejx_append(#{child.to_js}, #{append}, false, __promises);\n"
+        "#{' '*(indentation+4)}__ejx_append(#{child.to_js}, #{append}, false);\n"
       when String
         "#{' '*(indentation)}#{child}\n"
       when EJX::Template::Subtemplate
@@ -26,7 +26,7 @@ class EJX::Template::Multitemplate < EJX::Template::Subtemplate
     
     output << ' '*indentation << @children.last.strip.delete_suffix(';')
     if already_assigned
-      output << ";\n#{' '*indentation}__ejx_append(#{output_var}, #{append}, true, __promises);\n"
+      output << ";\n#{' '*indentation}__ejx_append(#{output_var}, #{append}, true);\n"
     else
       output << ", #{append}, true, __promises);\n"
     end
