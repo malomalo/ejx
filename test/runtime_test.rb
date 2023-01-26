@@ -228,14 +228,29 @@ class RuntimeTest < Minitest::Test
 
   test "a nested async iterater subtemplate" do
     t1 = template(<<~EJX)
-      <% const matrix = [new Promise(x => x([new Promise(r => r(1)),2])), {
-        forEach: iterator => [3,new Promise(r => r(4))].forEach(iterator)
-      }] %>
+      <% const matrix = [
+        new Promise(x => setTimeout(() => x([
+          new Promise(r => setTimeout(() => r(1), 5)),
+          2
+        ]), 5)),
+        {
+          forEach: iterator => new Promise(r => {
+            [
+              new Promise(r => setTimeout(() => r(3), 5)),
+              new Promise(r => setTimeout(() => r(4), 5))
+            ].forEach(iterator)
+            r()
+          })
+        }
+      ] %>
       <table>
       <% matrix.forEach(async (row) => { %>
         <tr>
-        <% (await row).forEach(async cell => { %>
-          <td><%= await cell %></td>
+        <% row = await row %>
+        <% row.forEach(async cell => { %>
+          <% const v = await cell %>
+          <% console.error('^^', v) %>
+          <td><%= v %></td>
         <% }) %>
         </tr>
       <% }) %>
@@ -243,6 +258,8 @@ class RuntimeTest < Minitest::Test
     EJX
 
     assert_equal([" ", "<table><tr><td>1 </td><td>2 </td></tr><tr><td>3 </td><td>4 </td></tr></table>"], render(t1))
+    
+    #TODO test array.forEach lower in nesting inside promises, might result in top Promises.all, which appends overall array, running before Promises.all of lower level append
   end
 
   test "an forEach with an async subtemplate" do
@@ -254,10 +271,12 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
-  
+
   test "an map with an async subtemplate" do
     t1 = template(<<~EJX)
-      <%= [new Promise(r => r(1)),2].map(async (i) => { %>
+      <%= [new Promise(r => {
+          setTimeout(() => r(1), 5)
+        }),2].map(async (i) => { %>
         <span><%= await i %></span>
       <% }) %>
     EJX
@@ -272,7 +291,7 @@ class RuntimeTest < Minitest::Test
         <span><%= await i %></span>
       <% }) %>
     EJX
-    
+
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
 end
