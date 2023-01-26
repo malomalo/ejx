@@ -54,6 +54,8 @@ class RuntimeTest < Minitest::Test
       }
       
       let result = template(#{JSON.generate(locals)})
+      
+      #{"setTimeout(() => {" if locals[:timeout]}
 
       if (result instanceof Promise) {
         result.then((result) => {
@@ -67,6 +69,7 @@ class RuntimeTest < Minitest::Test
         console.log(JSON.stringify({result: toHTML(result)}));
         process.exit(0);
       }
+      #{"}, #{locals[:timeout]})" if locals[:timeout]}
     JS
   end
 
@@ -87,85 +90,85 @@ class RuntimeTest < Minitest::Test
 
   test "rendering a promise that returns a string in a template" do
     t1 = template(<<~EJX)
-      <%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 10); } ) %>
     EJX
-    assert_equal(["hello world"], render(t1))
+    assert_equal(["hello world"], render(t1, timeout: 20))
 
     t2 = template(<<~EJX)
-      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 200); } ) %></div>
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve('hello world') }, 10); } ) %></div>
     EJX
-    assert_equal(["<div>hello world </div>"], render(t2))
+    assert_equal(["<div>hello world </div>"], render(t2, timeout: 20))
   end
 
   test "rendering a promise that element in a template" do
     t1 = template(<<~EJX)
-      <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) }, 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) }, 10); } ) %>
     EJX
-    assert_equal(["<div></div>"], render(t1))
+    assert_equal(["<div></div>"], render(t1, timeout: 20))
 
     t2 = template(<<~EJX)
-      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) } , 200); } ) %></div>
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createElement("div")) } , 10); } ) %></div>
     EJX
-    assert_equal(["<div><div></div> </div>"], render(t2))
+    assert_equal(["<div><div></div> </div>"], render(t2, timeout: 20))
   end
 
   test "rendering a promise that returns an array of elements in a template" do
     t1 = template(<<~EJX)
-      <%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) }, 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) }, 10); } ) %>
     EJX
-    assert_equal(["<div></div>", "<div></div>"], render(t1))
+    assert_equal(["<div></div>", "<div></div>"], render(t1, timeout: 20))
 
     t2 = template(<<~EJX)
-      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) } , 200); } ) %></div>
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) } , 10); } ) %></div>
     EJX
-    assert_equal(["<div><div></div><div></div> </div>"], render(t2))
+    assert_equal(["<div><div></div><div></div> </div>"], render(t2, timeout: 20))
   end
 
   test "rendering a promise that returns an nested array of elements in a template" do
     t1 = template(<<~EJX)
-      <%= new Promise( (resolve) => { setTimeout(() => { resolve([[document.createElement("div"), document.createElement("div")]]) }, 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve([[document.createElement("div"), document.createElement("div")]]) }, 10); } ) %>
     EJX
-    assert_equal([["<div></div>", "<div></div>"]], render(t1))
+    assert_equal([["<div></div>", "<div></div>"]], render(t1, timeout: 20))
 
     t2 = template(<<~EJX)
-      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve([[document.createElement("div"), document.createElement("div")]]) } , 200); } ) %></div>
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve([[document.createElement("div"), document.createElement("div")]]) } , 10); } ) %></div>
     EJX
-    assert_equal(["<div><div></div><div></div> </div>"], render(t2))
+    assert_equal(["<div><div></div><div></div> </div>"], render(t2, timeout: 20))
   end
 
   test "rendering a promise that returns a undefined" do
     t1 = template(<<~EJX)
     Hello
     <span>
-      <%= new Promise( (resolve) => { setTimeout(() => { resolve(undefined) }, 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve(undefined) }, 10); } ) %>
     </span>
     World
     EJX
-    assert_equal(["Hello\n", "<span> </span>", "\nWorld"], render(t1))
+    assert_equal(["Hello\n", "<span> </span>", "\nWorld"], render(t1, timeout: 20))
   end
 
   test "rendering a promise that returns a Text Node in a template" do
     t1 = template(<<~EJX)
-      <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 10); } ) %>
     EJX
-    assert_equal(["my text node"], render(t1))
+    assert_equal(["my text node"], render(t1, timeout: 20))
 
     t2 = template(<<~EJX)
-      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 200); } ) %></div>
+      <div><%= new Promise( (resolve) => { setTimeout(() => { resolve(document.createTextNode("my text node")) }, 10); } ) %></div>
     EJX
-    assert_equal(["<div>my text node </div>"], render(t2))
+    assert_equal(["<div>my text node </div>"], render(t2, timeout: 20))
   end
 
   test "rendering another template that has a promise inside a template" do
     t1 = template(<<~EJX)
-      <%= new Promise( (resolve) => { setTimeout(() => { resolve('hello') }, 200); } ) %>
+      <%= new Promise( (resolve) => { setTimeout(() => { resolve('hello') }, 10); } ) %>
     EJX
     t2 = template(<<~EJX)
       <% import t1 from "#{t1}"; %>
       <%= t1() %> world
     EJX
-    assert_equal(["hello"], render(t1))
-    assert_equal(["hello", " world"], render(t2))
+    assert_equal(["hello"], render(t1, timeout: 20))
+    assert_equal(["hello", " world"], render(t2, timeout: 50))
   end
 
   test "including an HTML string" do
@@ -179,7 +182,7 @@ class RuntimeTest < Minitest::Test
   test "rendering a subtemplate in a promise" do
     t1 = template(<<~EJX)
       <% var formTag = function(template) {
-           return new Promise( (resolve) => { setTimeout(() => { resolve(template()) }, 200); } );
+           return new Promise( (resolve) => { setTimeout(() => { resolve(template()) }, 10); } );
          } %>
 
       <form>
@@ -190,7 +193,7 @@ class RuntimeTest < Minitest::Test
       </form>
     EJX
 
-    assert_equal([' ', '<form><input type="text"><input type="submit"></form>'], render(t1))
+    assert_equal([' ', '<form><input type="text"><input type="submit"></form>'], render(t1, timeout: 20))
   end
 
   test "a forEach subtemplate" do
@@ -228,13 +231,26 @@ class RuntimeTest < Minitest::Test
 
   test "a nested async iterater subtemplate" do
     t1 = template(<<~EJX)
-      <% const matrix = [new Promise(x => x([new Promise(r => r(1)),2])), {
-        forEach: iterator => [3,new Promise(r => r(4))].forEach(iterator)
-      }] %>
+      <% const matrix = [
+        new Promise(x => setTimeout(() => x([
+          new Promise(r => setTimeout(() => r(1), 5)),
+          2
+        ]), 5)),
+        {
+          forEach: iterator => new Promise(r => {
+            [
+              new Promise(r => setTimeout(() => r(3), 5)),
+              new Promise(r => setTimeout(() => r(4), 5))
+            ].forEach(iterator)
+            r()
+          })
+        }
+      ] %>
       <table>
       <% matrix.forEach(async (row) => { %>
         <tr>
-        <% (await row).forEach(async cell => { %>
+        <% row = await row %>
+        <% row.forEach(async cell => { %>
           <td><%= await cell %></td>
         <% }) %>
         </tr>
@@ -242,7 +258,9 @@ class RuntimeTest < Minitest::Test
       </table>
     EJX
 
-    assert_equal([" ", "<table><tr><td>1 </td><td>2 </td></tr><tr><td>3 </td><td>4 </td></tr></table>"], render(t1))
+    assert_equal([" ", "<table><tr><td>1 </td><td>2 </td></tr><tr><td>3 </td><td>4 </td></tr></table>"], render(t1, timeout: 200))
+
+    #TODO test array.forEach lower in nesting inside promises, might result in top Promises.all, which appends overall array, running before Promises.all of lower level append
   end
 
   test "an forEach with an async subtemplate" do
@@ -254,15 +272,17 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
-  
+
   test "an map with an async subtemplate" do
     t1 = template(<<~EJX)
-      <%= [new Promise(r => r(1)),2].map(async (i) => { %>
+      <%= [new Promise(r => {
+          setTimeout(() => r(1), 5)
+        }),2].map(async (i) => { %>
         <span><%= await i %></span>
       <% }) %>
     EJX
 
-    assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
+    assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1, timeout: 10))
   end
 
   test "an iterater that is a promise" do
@@ -272,7 +292,7 @@ class RuntimeTest < Minitest::Test
         <span><%= await i %></span>
       <% }) %>
     EJX
-    
+
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
 end

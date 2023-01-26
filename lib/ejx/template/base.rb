@@ -22,7 +22,7 @@ class EJX::Template::Base
     end
     
     output << "\nexport default async function (locals) {\n"
-    output << "    var __output = [], __promises = [];\n    \n"
+    output << "    var __output = [];\n    \n"
     
     @children.each do |child|
       output << case child
@@ -32,7 +32,6 @@ class EJX::Template::Base
         child.to_js(var_generator: var_generator)
       end
     end
-    output << "\n    await Promise.all(__promises);\n"
     output << "    return __output;\n"
     output << "}"
     output
