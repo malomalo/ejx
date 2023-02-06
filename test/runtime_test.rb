@@ -60,7 +60,7 @@ class RuntimeTest < Minitest::Test
           console.log(JSON.stringify({result: toHTML(result)}));
           process.exit(0);
         }, (e) => {
-          console.log(JSON.stringify({error: [e.name, e.message]}));
+          console.log(JSON.stringify({error: [e.name, e.message, e.stack]}));
           process.exit(1);
         });
       } else {
@@ -257,9 +257,7 @@ class RuntimeTest < Minitest::Test
       </table>
     EJX
 
-    assert_equal([" ", "<table><tr><td>1 </td><td>2 </td></tr><tr><td>3 </td><td>4 </td></tr></table>"], render(t1))
-    
-    #TODO test array.forEach lower in nesting inside promises, might result in top Promises.all, which appends overall array, running before Promises.all of lower level append
+    assert_equal([" ", "<table><tr> <td>1 </td> <td>2 </td></tr><tr> <td>3 </td> <td>4 </td></tr></table>"], render(t1))
   end
 
   test "an forEach with an async subtemplate" do
@@ -286,7 +284,7 @@ class RuntimeTest < Minitest::Test
 
   test "an iterater that is a promise" do
     t1 = template(<<~EJX)
-      <% const collection = {forEach: template => new Promise(r => r([1,2].forEach(template)))} %>
+      <% const collection = {forEach: template => new Promise(r => r([1,2].map(template)))} %>
       <% collection.forEach(async (i) => { %>
         <span><%= await i %></span>
       <% }) %>
@@ -316,9 +314,14 @@ class Node
 
         stdout, stderr, status = Open3.capture3(binary, scriptfile.path)
 
+        STDERR.puts stderr if !stderr.empty?
         if status.success?
-          STDERR.puts stderr if !stderr.empty?
-          JSON.parse(stdout)['result']
+          begin
+            JSON.parse(stdout)['result']
+          rescue
+            puts stdout, stderr
+            puts '---'
+          end
         else
           begin
             result = JSON.parse(stdout)['error']
