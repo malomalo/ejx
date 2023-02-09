@@ -40,8 +40,14 @@ class EJX::Template::Subtemplate
     if already_assigned
       output << "#{' '*indentation}#{@children.first}\n"
     elsif @iterator
+      output << <<~JS.gsub(/\n+\Z/, '')
+        #{' '*(indentation)}var #{global_output_var}_results = [];
+        #{' '*(indentation)}var #{global_output_var}_promises = [];
+        #{' '*(indentation)}var #{global_output_var}_result = 
+      JS
+      
       indentation += 4
-      output << ' '*(indentation-4) << "var #{global_output_var}_result = " << if @function
+      output << if @function
         @children.first.sub(/((?:async\s+)?\s*function\s*\([^\)\(]*\)\s*\{\s*)\Z/m, <<~JS)
           (...__args) => {
           #{' '*(indentation)}var #{sub_global_output_var}_results = [];
@@ -90,7 +96,7 @@ class EJX::Template::Subtemplate
     if @iterator
       split = @children.last.strip.delete_suffix(';').split(/\}/, 2)
       output << split[0] << "})(...__args);\n"
-      output << ' '*(indentation) << "return __ejx_append(#{sub_global_output_var}_results, #{append}, 'escape', #{promises}, #{sub_global_output_var}_result);\n"
+      output << ' '*(indentation) << "return __ejx_append(#{sub_global_output_var}_results, #{global_output_var}_results, 'escape', #{global_output_var}_promises, #{sub_global_output_var}_result);\n"
       output << ''
       indentation = indentation - 4
       output << ' '*indentation << "}" << split[1]
@@ -98,17 +104,17 @@ class EJX::Template::Subtemplate
       output << @children.last.strip.delete_suffix(';')
     end
     
-    output << if already_assigned
-      if @append
+    if already_assigned
+      output << if @append
         ";\n#{' '*indentation}__ejx_append(#{global_output_var}, #{append}, 'escape', #{promises});\n"
       else
         ";\n"
       end
     else
+      output << ";\n"
       if @append
-        ";\n"
-      else
-        ";\n"
+        output << "#{' '*indentation}__ejx_append(#{global_output_var}_results.flat(1), #{append}, 'escape', #{promises}, "
+        output << "(#{global_output_var}_result instanceof Promise) ? #{global_output_var}_result.then(() => Promise.all(#{global_output_var}_promises).then(r => r.flat(1))) : Promise.all(#{global_output_var}_promises).then(r => r.flat(1)));\n"
       end
     end
 
