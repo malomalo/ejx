@@ -7,8 +7,17 @@ class EJX::Template::Subtemplate
     @modifiers = modifiers
     @append = append
     
-    @function = @children.first =~ /(?:async\s+)?function\s*\([^\)]*\)\s*\{\s*\Z/m
-    @arrow_function = @children.first =~ /(?:async)?(?:\s*\([^\)\(]*\)|(?:(?<=\()|\s+)[^\(\s]+)?\s*=>\s*\{\s*\Z/m
+    @function = false
+    @arrow_function = false
+    @async = false
+    
+    if match = @children.first.match(/(?:async\s+)?function\s*\([^\)]*\)\s*\{\s*\Z/m)
+      @function = true
+      @async = match[0].start_with?('async')
+    elsif match = @children.first.match(/(?:async)?(?:\s*\([^\)\(]*\)|(?:(?<=\()|\s+)[^\(\s]+)?\s*=>\s*\{\s*\Z/m)
+      @arrow_function = true
+      @async = match[0].start_with?('async')
+    end
     @iterator = @function || @arrow_function
   end
 
@@ -25,27 +34,27 @@ class EJX::Template::Subtemplate
 
     already_assigned = @children.first =~ /\A\s*(var|const|let)\s+(\S+)/
     global_output_var = already_assigned ? $2 : var_generator.next
-    sub_global_output_var = if @iterator
-       var_generator.next
-    end
+    sub_global_output_var = var_generator.next
     output_var = var_generator.next
 
     if already_assigned
       output << "#{' '*indentation}#{@children.first}\n"
-    elsif appending? && !@iterator
-      output << "#{' '*(indentation)}var #{global_output_var}_results = [];\n"
-      output << "#{' '*(indentation)}var #{global_output_var}_promises = [];\n"
-      output << "#{' '*indentation}__ejx_append("
-      output << @children.first << "\n"
     elsif @iterator
-      output << "#{' '*(indentation)}var #{global_output_var}_results = [];\n"
-      output << "#{' '*(indentation)}var #{global_output_var}_promises = [];\n"
-      output << "#{' '*indentation}__ejx_append("
       indentation += 4
-      output << if @function
-        @children.first.sub(/((?:async\s+)?\s*function\s*\([^\)\(]*\)\s*\{\s*)\Z/m, "(...__args) => {\n#{' '*indentation}var #{sub_global_output_var}_results = [];\n#{' '*indentation}var #{sub_global_output_var}_promises = [];\n#{' '*indentation}return __ejx_append((\\1\n")
+      output << ' '*(indentation-4) << "var #{global_output_var}_result = " << if @function
+        @children.first.sub(/((?:async\s+)?\s*function\s*\([^\)\(]*\)\s*\{\s*)\Z/m, <<~JS)
+          (...__args) => {
+          #{' '*(indentation)}var #{sub_global_output_var}_results = [];
+          #{' '*(indentation)}var #{sub_global_output_var}_promises = [];
+          #{' '*(indentation)}var #{sub_global_output_var}_result = (\\1
+        JS
       else
-        @children.first.sub(/((?:async)?(?:\s*\([^\)\(]*\)|(?:(?<=\()|\s+)[^\(\s]+)?\s*=>\s*\{\s*)\Z/m, "(...__args) => {\n#{' '*indentation}var #{sub_global_output_var}_results = [];\n#{' '*indentation}var #{sub_global_output_var}_promises = [];\n#{' '*indentation}return __ejx_append((\\1\n")
+        @children.first.sub(/((?:async)?(?:\s*\([^\)\(]*\)|(?:(?<=\()|\s+)[^\(\s]+)?\s*=>\s*\{\s*)\Z/m, <<~JS)
+          (...__args) => {
+          #{' '*(indentation)}var #{sub_global_output_var}_results = [];
+          #{' '*(indentation)}var #{sub_global_output_var}_promises = [];
+          #{' '*(indentation)}var #{sub_global_output_var}_result = (\\1
+        JS
       end
     else
       puts '!!!'
@@ -63,20 +72,25 @@ class EJX::Template::Subtemplate
       end
     end
 
-    if !already_assigned
-      if @iterator
-        output << ' '*(indentation+4) << "#{sub_global_output_var}_results.push(#{@iterator ? output_var : output_var});\n" if @append
-      else
-        output << ' '*(indentation+4) << "#{global_output_var}.push(#{@iterator ? output_var : output_var});\n" if @append
-      end
-    end
 
-    output << ' '*(indentation+4) << "return #{output_var};\n";
+    if @iterator
+      output << ' '*(indentation+4) << "#{sub_global_output_var}_results.push(#{@iterator ? output_var : output_var});\n"
+      if @async
+        output << ' '*(indentation+4) << "await Promise.all(#{sub_global_output_var}_promises);\n"
+        output << ' '*(indentation+4) << "return #{output_var};\n";
+      else
+        output << ' '*(indentation+4) << "return Promise.all(#{sub_global_output_var}_promises).then(() => #{output_var});\n"
+      end
+    else
+      output << ' '*(indentation+4) << "#{global_output_var}.push(#{@iterator ? output_var : output_var});\n" if @append
+      output << ' '*(indentation+4) << "return #{output_var};\n";
+    end
 
     output << ' '*indentation
     if @iterator
       split = @children.last.strip.delete_suffix(';').split(/\}/, 2)
-      output << split[0] << "})(...__args), #{global_output_var}_results, 'escape', #{global_output_var}_promises, #{sub_global_output_var}_results, #{sub_global_output_var}_promises);\n"
+      output << split[0] << "})(...__args);\n"
+      output << ' '*(indentation) << "return __ejx_append(#{sub_global_output_var}_results, #{append}, 'escape', #{promises}, #{sub_global_output_var}_result);\n"
       output << ''
       indentation = indentation - 4
       output << ' '*indentation << "}" << split[1]
@@ -92,8 +106,7 @@ class EJX::Template::Subtemplate
       end
     else
       if @append
-        puts !@modifiers.empty?
-        ", #{append}, #{already_assigned && @modifiers.empty? ? false : '"escape"'}, #{promises}, #{global_output_var}_results, #{global_output_var}_promises);\n"
+        ";\n"
       else
         ";\n"
       end
