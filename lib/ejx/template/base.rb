@@ -10,7 +10,6 @@ class EJX::Template::Base
 
   def to_module
     var_generator = EJX::Template::VarGenerator.new
-    nested_promises = false
     
     output = if @escape
       "import {" + @escape.split('.').reverse.join(" as __ejx_append} from '") + "';\n"
@@ -26,10 +25,6 @@ class EJX::Template::Base
     output << "    var __output = [], __promises = [];\n    \n"
     
     @children.each do |child|
-      if child.is_a?(EJX::Template::Subtemplate) && child.has_nested_promises?
-        nested_promises = true
-      end
-      nested_promises = true
       output << case child
       when EJX::Template::String
         "    __output.push(#{child.to_js});\n"
@@ -38,15 +33,7 @@ class EJX::Template::Base
       end
     end
     
-    # if nested_promises
-    #   output << "\n    var promises_length;"
-    #   output << "\n    while (promises_length != __promises.length) {"
-    #   output << "\n        promises_length = __promises.length;"
-    #   output << "\n        await Promise.all(__promises);"
-    #   output << "\n    }"
-    # else
-      output << "\n    await Promise.all(__promises);"
-    # end
+    output << "\n    await Promise.all(__promises);"
 
     output << "\n    return __output;"
     output << "\n}"

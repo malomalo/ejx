@@ -21,10 +21,6 @@ class EJX::Template::Subtemplate
     @iterator = @function || @arrow_function
   end
 
-  def has_nested_promises?
-    @iterator || @children.any? { |c| c.is_a?(EJX::Template::Subtemplate) && c.has_nested_promises? }
-  end
-  
   def appending?
     @modifiers.any?
   end
