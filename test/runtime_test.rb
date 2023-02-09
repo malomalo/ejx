@@ -283,7 +283,7 @@ class RuntimeTest < Minitest::Test
 
   test "an iterater that is a promise" do
     t1 = template(<<~EJX)
-      <% const collection = {forEach: template => new Promise(r => r([1,2].map(template)))} %>
+      <% const collection = {forEach: template => new Promise(r => r([1,2].forEach(template)))} %>
       <% collection.forEach(async (i) => { %>
         <span><%= await i %></span>
       <% }) %>
