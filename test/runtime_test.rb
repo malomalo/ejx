@@ -249,7 +249,6 @@ class RuntimeTest < Minitest::Test
         <% row = await row %>
         <% row.forEach(async cell => { %>
           <% const v = await cell %>
-          <% console.error('^^', v) %>
           <td><%= v %></td>
         <% }) %>
         </tr>
