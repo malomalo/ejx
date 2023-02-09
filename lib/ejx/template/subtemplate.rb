@@ -21,10 +21,6 @@ class EJX::Template::Subtemplate
     @iterator = @function || @arrow_function
   end
 
-  def appending?
-    @modifiers.any?
-  end
-  
   def to_js(indentation: 4, var_generator: nil, append: "__output", promises: '__promises')
     output = ''
 
