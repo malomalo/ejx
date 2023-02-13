@@ -291,6 +291,19 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
+  
+  test "multiple sub templates" do
+    t1 = template(<<~EJX)
+      <% function formTag (a, b) { return [a(), b()]; } %>
+      <%= formTag(function () { %>
+        <input type="text" >
+      <% }, function () { %>
+        <input type="submit" />
+      <% }) %>
+    EJX
+
+    assert_equal(['<input type="text">', '<input type="submit">'], render(t1))
+  end
 end
 
 

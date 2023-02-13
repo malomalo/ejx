@@ -23,10 +23,10 @@ class EJX::Template::Subtemplate
     @assigned_to_variable = @children.first =~ /\A\s*(var|const|let)\s+(\S+)/
     @async = false
     
-    if match = @children.first.match(/(?:async\s+)?function\s*\([^\)]*\)\s*\{\s*\Z/m)
+    if match = @children.first&.match(/(?:async\s+)?function\s*\([^\)]*\)\s*\{\s*\Z/m)
       @function_type = :regular
       @async = match[0].start_with?('async')
-    elsif match = @children.first.match(/(?:async)?(?:\s*\([^\)\(]*\)|(?:(?<=\()|\s+)[^\(\s]+)?\s*=>\s*\{\s*\Z/m)
+    elsif match = @children.first&.match(/(?:async)?(?:\s*\([^\)\(]*\)|(?:(?<=\()|\s+)[^\(\s]+)?\s*=>\s*\{\s*\Z/m)
       @function_type = :arrow
       @async = match[0].start_with?('async')
     end
