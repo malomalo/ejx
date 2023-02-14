@@ -20,7 +20,7 @@ class EJX::Template::Subtemplate
     @modifiers = modifiers
     @append = append
     
-    @assigned_to_variable = @children.first =~ /\A\s*(var|const|let)\s+(\S+)/
+    @assigned_to_variable = @children.first&.match(/\A\s*(var|const|let)\s+(\S+)/)&.send(:[], 2)
     @async = false
     
     if match = @children.first&.match(/(?:async\s+)?function\s*\([^\)]*\)\s*\{\s*\Z/m)
@@ -35,12 +35,13 @@ class EJX::Template::Subtemplate
   def to_js(indentation: 4, var_generator: nil, append: "__output", promises: '__promises')
     output = ''
 
-    global_output_var = assigned_to_variable? ? $2 : var_generator.next
+    global_output_var = var_generator.next if !assigned_to_variable?
     sub_global_output_var = var_generator.next
     output_var = var_generator.next
 
     if assigned_to_variable?
       output << "#{' '*indentation}#{@children.first}\n"
+      output << "#{' '*(indentation+4)}var #{sub_global_output_var}_promises = [];\n"
     else
       output << <<~JS.gsub(/\n+\Z/, '')
         #{' '*(indentation)}var #{global_output_var}_results = [];
@@ -78,10 +79,16 @@ class EJX::Template::Subtemplate
       end
     end
 
-    output << ' '*(indentation+4) << "#{sub_global_output_var}_results.push(#{output_var});\n"
+    if !assigned_to_variable?
+      output << ' '*(indentation+4) << "#{sub_global_output_var}_results.push(#{output_var});\n"
+    end
+
     if async?
       output << ' '*(indentation+4) << "await Promise.all(#{sub_global_output_var}_promises);\n"
       output << ' '*(indentation+4) << "return #{output_var};\n";
+    elsif assigned_to_variable?
+      output << ' '*(indentation+4)
+      output << "return #{sub_global_output_var}_promises.length === 0 ? #{output_var} : Promise.all(#{sub_global_output_var}_promises).then(() => #{output_var});\n"
     else
       output << ' '*(indentation+4) << "return Promise.all(#{sub_global_output_var}_promises).then(() => #{output_var});\n"
     end
@@ -89,9 +96,11 @@ class EJX::Template::Subtemplate
     output << ' '*indentation
 
     split = @children.last.strip.delete_suffix(';').split(/\}/, 2)
-    output << split[0] << "})(...__args);\n"
-    output << ' '*(indentation) << "return __ejx_append(#{sub_global_output_var}_results, #{global_output_var}_results, 'escape', #{global_output_var}_promises, #{sub_global_output_var}_result);\n"
-    output << ''
+    output << split[0]
+    if !assigned_to_variable?
+      output << "})(...__args);\n"
+      output << ' '*(indentation) << "return __ejx_append(#{sub_global_output_var}_results, #{global_output_var}_results, 'escape', #{global_output_var}_promises, #{sub_global_output_var}_result);\n"
+    end
     indentation = indentation - 4
     output << ' '*indentation << "}" << split[1]
     

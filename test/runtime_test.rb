@@ -291,7 +291,7 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
-  
+
   test "multiple sub templates" do
     t1 = template(<<~EJX)
       <% function formTag (a, b) { return [a(), b()]; } %>
@@ -303,6 +303,35 @@ class RuntimeTest < Minitest::Test
     EJX
 
     assert_equal(['<input type="text">', '<input type="submit">'], render(t1))
+  end
+  
+  test 'assignment test' do
+    t1 = template(<<~EJX)
+      <% async function createElement(elName, template) {
+        var el = document.createElement(elName);
+        el.append(...await template.children())
+        return el;
+      } %>
+        
+      <% const expense_table = createElement('table', {children: () => { %>
+          <tr>
+              <th>
+                  Type
+              </th>
+              <th>
+                  Amount
+              </th>
+              <th>
+                  Year
+              </th>
+              <th></th>
+          </tr>
+      <% }}) %>
+      
+      <%= expense_table %>
+    EJX
+
+    assert_equal(["<table><tr><th>\n            Type\n        </th><th>\n            Amount\n        </th><th>\n            Year\n        </th><th></th></tr></table>"], render(t1))
   end
 end
 
