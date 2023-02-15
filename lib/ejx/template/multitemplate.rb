@@ -1,6 +1,6 @@
 class EJX::Template::Multitemplate < EJX::Template::Subtemplate
 
-  def to_js(indentation: 4, var_generator: nil, append: "__output")
+  def to_js(indentation: 4, var_generator: nil, append: "__output", promises: '__promises')
     already_assigned = @children.first =~ /\A\s*(var|const|let)\s+(\S+)/
     output_var = $2
     output = ""
@@ -18,7 +18,7 @@ class EJX::Template::Multitemplate < EJX::Template::Subtemplate
       when String
         "#{' '*(indentation)}#{child}\n"
       when EJX::Template::Subtemplate
-        child.to_sub_js(indentation: indentation + 4, var_generator: var_generator)
+        child.to_sub_js(indentation: indentation + 4, var_generator: var_generator, promises: promises)
       else
         child.to_js(indentation: indentation + 4, var_generator: var_generator, append: append)
       end
