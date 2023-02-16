@@ -55,6 +55,10 @@ class RuntimeTest < Minitest::Test
       
       let result = template(#{JSON.generate(locals)})
 
+      if (result instanceof Array) {
+        result = Promise.all(result);
+      }
+      
       if (result instanceof Promise) {
         result.then((result) => {
           console.log(JSON.stringify({result: toHTML(result)}));
@@ -312,26 +316,68 @@ class RuntimeTest < Minitest::Test
         el.append(...await template.children())
         return el;
       } %>
-        
+
       <% const expense_table = createElement('table', {children: () => { %>
           <tr>
-              <th>
-                  Type
-              </th>
-              <th>
-                  Amount
-              </th>
-              <th>
-                  Year
-              </th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Year</th>
               <th></th>
           </tr>
       <% }}) %>
-      
+
       <%= expense_table %>
     EJX
 
-    assert_equal(["<table><tr><th>\n            Type\n        </th><th>\n            Amount\n        </th><th>\n            Year\n        </th><th></th></tr></table>"], render(t1))
+    assert_equal(["<table><tr><th>Type</th><th>Amount</th><th>Year</th><th></th></tr></table>"], render(t1))
+  end
+
+  test 'another subtemplate test' do
+    t1 = template(<<~EJX)
+      <% var survey = {
+            listings: {
+              forEach: (fn) => { [
+                {id: 1, attachments: { forEach: (fn) => [3,4].forEach(fn) }},
+                {id: 2, attachments: { forEach: (fn) => [5,6].forEach(fn) }}
+              ].forEach(fn) }
+            }
+      } %>
+
+      <pages>
+      <% survey.listings.forEach(async listing => { %>
+          <page><%= listing.id %></page>
+          <% await listing.attachments.forEach(async attachment => { %>
+            <subpage><%= attachment %></subpage>
+          <% }) %>
+      <% }) %>
+      </pages>
+    EJX
+
+    assert_equal([" ", "<pages><page>1 </page><subpage>3 </subpage><subpage>4 </subpage><page>2 </page><subpage>5 </subpage><subpage>6 </subpage></pages>"], render(t1))
+  end
+
+  test 'outputing a function that returns objects' do
+    t1 = template(<<~EJX)
+      <%  var x = [
+            1,
+            new Promise(r => { setTimeout(() => r(2), 5) })
+          ];
+
+      async function maskableTag(i, template) {
+        const container = document.createElement('tr')
+        container.append(...(await template(i)))
+        return container;
+      }
+       %>
+
+        <%= x.map((i) => { %>
+          <%= maskableTag(i, (a) => { %>
+            <%= a %>
+          <% }) %>
+        <% }) %>
+    EJX
+
+    assert_equal(["<tr>1</tr>", "<tr>2</tr>"], render(t1))
   end
 end
 

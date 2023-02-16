@@ -42,6 +42,9 @@ class EJX::Template::Subtemplate
     if assigned_to_variable?
       output << "#{' '*indentation}#{@children.first}\n"
       output << "#{' '*(indentation+4)}var #{sub_global_output_var}_promises = [];\n"
+    elsif !(@modifiers & [:escape, :unescape]).empty?
+      output << "#{' '*indentation}var #{global_output_var}_result = #{@children.first}\n"
+      output << "#{' '*(indentation+4)}var #{sub_global_output_var}_promises = [];\n"
     else
       output << <<~JS.gsub(/\n+\Z/, '')
         #{' '*(indentation)}var #{global_output_var}_results = [];
@@ -79,7 +82,7 @@ class EJX::Template::Subtemplate
       end
     end
 
-    if !assigned_to_variable?
+    if !assigned_to_variable? && (@modifiers & [:escape, :unescape]).empty?
       output << ' '*(indentation+4) << "#{sub_global_output_var}_results.push(#{output_var});\n"
     end
 
@@ -93,26 +96,26 @@ class EJX::Template::Subtemplate
       output << ' '*(indentation+4) << "return Promise.all(#{sub_global_output_var}_promises).then(() => #{output_var});\n"
     end
 
-    output << ' '*indentation
+    output << ' '*((@modifiers & [:escape, :unescape]).empty? ? indentation : indentation-4)
 
     split = @children.last.strip.delete_suffix(';').split(/\}/, 2)
     output << split[0]
-    if !assigned_to_variable?
+      
+    if !assigned_to_variable? && (@modifiers & [:escape, :unescape]).empty?
       output << "})(...__args);\n"
-      output << ' '*(indentation) << "return __ejx_append(#{sub_global_output_var}_results, #{global_output_var}_results, 'escape', #{global_output_var}_promises, #{sub_global_output_var}_result);\n"
+      output << "#{' '*indentation}__ejx_append(#{sub_global_output_var}_results, #{global_output_var}_results, 'escape', #{global_output_var}_promises, #{sub_global_output_var}_result);"
+      output << ' '*(indentation) << "return #{sub_global_output_var}_result;\n"
     end
     indentation = indentation - 4
     output << ' '*indentation << "}" << split[1]
     
     if assigned_to_variable?
-      output << if append?
-        ";\n#{' '*indentation}__ejx_append(#{global_output_var}, #{append}, 'escape', #{promises});\n"
-      else
-        ";\n"
-      end
+      output << ";\n"
     else
       output << ";\n"
-      if append?
+      if !(@modifiers & [:escape, :unescape]).empty?
+        output << "#{' '*indentation}__ejx_append(#{global_output_var}_result, #{append}, 'escape', #{promises})\n"
+      else
         output << "#{' '*indentation}__ejx_append(#{global_output_var}_results.flat(1), #{append}, 'escape', #{promises}, "
         output << "(#{global_output_var}_result instanceof Promise) ? #{global_output_var}_result.then(() => Promise.all(#{global_output_var}_promises).then(r => r.flat(1))) : Promise.all(#{global_output_var}_promises).then(r => r.flat(1)));\n"
       end
@@ -121,7 +124,7 @@ class EJX::Template::Subtemplate
     output
   end
   
-  def to_sub_js(indentation: 4, var_generator: nil)
+  def to_sub_js(indentation: 4, var_generator: nil, promises: '__promises')
     output_var = var_generator.next
     
     output = "#{' '*(indentation)}var #{output_var} = [];\n"
