@@ -386,6 +386,7 @@ class RuntimeTest < Minitest::Test
       const tag = document.createElement(tagName)
       const content = options.content()
       content.forEach(el => tag.append(el))
+      return tag;
     } %>
     <%= const table = createElement('table', {content: () => { %>
         <tr>

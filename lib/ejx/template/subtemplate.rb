@@ -106,11 +106,14 @@ class EJX::Template::Subtemplate
       output << "#{' '*indentation}__ejx_append(#{sub_global_output_var}_results, #{global_output_var}_results, 'escape', #{global_output_var}_promises, #{sub_global_output_var}_result);"
       output << ' '*(indentation) << "return #{sub_global_output_var}_result;\n"
     end
-    indentation = indentation - 4
     output << ' '*indentation << "}" << split[1]
+    indentation = indentation - 4    
     
     if assigned_to_variable?
       output << ";\n"
+      if !(@modifiers & [:escape, :unescape]).empty?
+        output << "#{' '*indentation}__ejx_append(#{@assigned_to_variable}, #{append}, 'escape', #{promises})\n"
+      end
     else
       output << ";\n"
       if !(@modifiers & [:escape, :unescape]).empty?
