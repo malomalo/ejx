@@ -379,6 +379,26 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(["<tr>1</tr>", "<tr>2</tr>"], render(t1))
   end
+  
+  test "subtemplate is an option of a function" do
+    t1 = template(<<~EJX)
+    <% const createElement = (tagName, options) => {
+      const tag = document.createElement(tagName)
+      const content = options.content()
+      content.forEach(el => tag.append(el))
+    } %>
+    <%= const table = createElement('table', {content: () => { %>
+        <tr>
+            <th></th>
+            <th>Tenant</th>
+            <th>Occupied Space</th>
+            <th></th>
+        </tr>
+    <% }}) %>
+    EJX
+    
+    assert_equal(['<table><tr><th></th><th>Tenant</th><th>Occupied Space</th><th></th></tr></table>'], render(t1))
+  end
 end
 
 
