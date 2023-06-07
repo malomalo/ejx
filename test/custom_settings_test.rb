@@ -30,7 +30,7 @@ class CustomSettingsTest < Minitest::Test
           var __output = [], __promises = [];
           
           __output.push("Hello ");
-          __ejx_append(name, __output, true, __promises);
+          __ejx_append(name, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;

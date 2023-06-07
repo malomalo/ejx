@@ -32,9 +32,12 @@ class EJX::Template::Base
         child.to_js(var_generator: var_generator)
       end
     end
-    output << "\n    await Promise.all(__promises);\n"
-    output << "    return __output;\n"
-    output << "}"
+    
+    output << "\n    await Promise.all(__promises);"
+
+    output << "\n    return __output;"
+    output << "\n}"
+
     output
   end
 

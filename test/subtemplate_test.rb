@@ -27,18 +27,18 @@ class SubtemplateTest < Minitest::Test
             a.append.apply(a, template());
             return a;
         }
-          var __a = [];
-          __ejx_append(formTag(function () {
-              var __b = [];
-              var __c = document.createElement("input");
-              __c.setAttribute("type", "text");
-              __ejx_append(__c, __b, false, __promises);
+          var __a_result = formTag(function () {
+              var __b_promises = [];
+              var __c = [];
               var __d = document.createElement("input");
-              __d.setAttribute("type", "submit");
-              __ejx_append(__d, __b, false, __promises);
-              __a.push(__b);
-              return __b;
-          }), __output, true, __promises, __a);
+              __d.setAttribute("type", "text");
+              __ejx_append(__d, __c, 'unescape', __b_promises);
+              var __e = document.createElement("input");
+              __e.setAttribute("type", "submit");
+              __ejx_append(__e, __c, 'unescape', __b_promises);
+              return Promise.all(__b_promises).then(() => __c);
+      });
+          __ejx_append(__a_result, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -59,13 +59,21 @@ class SubtemplateTest < Minitest::Test
       export default async function (locals) {
           var __output = [], __promises = [];
           
-          var __a = [];
-          __ejx_append([1,2].forEach((i) => {
-              var __b = [];
-              __ejx_append(i, __b, true, __promises);
-              __a.push(__b);
-              return __b;
-          }), __output, true, __promises, __a);
+          var __a_results = [];
+          var __a_promises = [];
+          var __a_result = [1,2].forEach((...__args) => {
+              var __b_results = [];
+              var __b_promises = [];
+              var __b_result = ((i) => {
+                  var __c = [];
+                  __ejx_append(i, __c, 'escape', __b_promises);
+                  __b_results.push(__c);
+                  return Promise.all(__b_promises).then(() => __c);
+              })(...__args);
+              __ejx_append(__b_results, __a_results, 'escape', __a_promises, __b_result);
+              return __b_result;
+          });
+          __ejx_append(__a_results.flat(1), __output, 'escape', __promises, (__a_result instanceof Promise) ? __a_result.then(() => Promise.all(__a_promises).then(r => r.flat(1))) : Promise.all(__a_promises).then(r => r.flat(1)));
 
           await Promise.all(__promises);
           return __output;
@@ -86,24 +94,22 @@ class SubtemplateTest < Minitest::Test
     export default async function (locals) {
         var __output = [], __promises = [];
         
-        var __a = [];
-        __ejx_append([1,2].forEach(async (i) => {
-            var __b = [];
-            var resolve, error;
-            var thisPromise = new Promise((r, e) => {
-              resolve = r;
-              error = e;
-            });
-            __promises.push(thisPromise);
-            try {
-                __ejx_append(await i, __b, true, __promises);
-                __a.push(__b);
-                resolve()
-            } catch (e) {
-                error(e)
-            }
-            return __b;
-        }), __output, true, __promises, __a);
+        var __a_results = [];
+        var __a_promises = [];
+        var __a_result = [1,2].forEach((...__args) => {
+            var __b_results = [];
+            var __b_promises = [];
+            var __b_result = (async (i) => {
+                var __c = [];
+                __ejx_append(await i, __c, 'escape', __b_promises);
+                __b_results.push(__c);
+                await Promise.all(__b_promises);
+                return __c;
+            })(...__args);
+            __ejx_append(__b_results, __a_results, 'escape', __a_promises, __b_result);
+            return __b_result;
+        });
+        __ejx_append(__a_results.flat(1), __output, 'escape', __promises, (__a_result instanceof Promise) ? __a_result.then(() => Promise.all(__a_promises).then(r => r.flat(1))) : Promise.all(__a_promises).then(r => r.flat(1)));
 
         await Promise.all(__promises);
         return __output;
@@ -139,17 +145,17 @@ class SubtemplateTest < Minitest::Test
             a.append.apply(a, template());
             return a
          }
-          var __a = [];
-          __ejx_append(formTag(function (f) {
-              var __b = [];
+          var __a_result = formTag(function (f) {
+              var __b_promises = [];
+              var __c = [];
               if (true) {
-              __ejx_append("\\n      yes\\n  ", __b, false, __promises);
+              __ejx_append("\\n      yes\\n  ", __c, 'unescape', __b_promises);
               } else {
-              __ejx_append("\\n      no\\n  ", __b, false, __promises);
+              __ejx_append("\\n      no\\n  ", __c, 'unescape', __b_promises);
               }
-              __a.push(__b);
-              return __b;
-          }), __output, true, __promises, __a);
+              return Promise.all(__b_promises).then(() => __c);
+      });
+          __ejx_append(__a_result, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -171,18 +177,18 @@ class SubtemplateTest < Minitest::Test
       export default async function (locals) {
           var __output = [], __promises = [];
           
-          var __a = [];
-          __ejx_append(formTag(function () {
-              var __b = [];
-              var __c = document.createElement("input");
-              __c.setAttribute("type", "text");
-              __ejx_append(__c, __b, false, __promises);
+          var __a_result = formTag(function () {
+              var __b_promises = [];
+              var __c = [];
               var __d = document.createElement("input");
-              __d.setAttribute("type", "submit");
-              __ejx_append(__d, __b, false, __promises);
-              __a.push(__b);
-              return __b;
-          }, function () { return 1; }), __output, true, __promises, __a);
+              __d.setAttribute("type", "text");
+              __ejx_append(__d, __c, 'unescape', __b_promises);
+              var __e = document.createElement("input");
+              __e.setAttribute("type", "submit");
+              __ejx_append(__e, __c, 'unescape', __b_promises);
+              return Promise.all(__b_promises).then(() => __c);
+      }, function () { return 1; });
+          __ejx_append(__a_result, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -209,15 +215,15 @@ class SubtemplateTest < Minitest::Test
               var __a = [];
               var __b = document.createElement("input");
               __b.setAttribute("type", "text");
-              __ejx_append(__b, __a, false, __promises);
+              __ejx_append(__b, __a, 'unescape', __promises);
               return __a;
           }, function () {
               var __c = [];
               var __d = document.createElement("input");
               __d.setAttribute("type", "submit");
-              __ejx_append(__d, __c, false, __promises);
+              __ejx_append(__d, __c, 'unescape', __promises);
               return __c;
-          }), __output, true, __promises);
+          }), __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -250,18 +256,18 @@ class SubtemplateTest < Minitest::Test
             a.append.apply(a, template());
             return a;
         }
-          var __a = [];
-          __ejx_append(formTag(() => {
-              var __b = [];
-              var __c = document.createElement("input");
-              __c.setAttribute("type", "text");
-              __ejx_append(__c, __b, false, __promises);
+          var __a_result = formTag(() => {
+              var __b_promises = [];
+              var __c = [];
               var __d = document.createElement("input");
-              __d.setAttribute("type", "submit");
-              __ejx_append(__d, __b, false, __promises);
-              __a.push(__b);
-              return __b;
-          }), __output, true, __promises, __a);
+              __d.setAttribute("type", "text");
+              __ejx_append(__d, __c, 'unescape', __b_promises);
+              var __e = document.createElement("input");
+              __e.setAttribute("type", "submit");
+              __ejx_append(__e, __c, 'unescape', __b_promises);
+              return Promise.all(__b_promises).then(() => __c);
+      });
+          __ejx_append(__a_result, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -283,11 +289,12 @@ class SubtemplateTest < Minitest::Test
           var __output = [], __promises = [];
           
           var x = [1,2].map((n) => {
-              var __a = [];
-              var __b = document.createElement("input");
-              __b.setAttribute("type", "text");
-              __ejx_append(__b, __a, false, __promises);
-              return __a;
+              var __a_promises = [];
+              var __b = [];
+              var __c = document.createElement("input");
+              __c.setAttribute("type", "text");
+              __ejx_append(__c, __b, 'unescape', __a_promises);
+              return __a_promises.length === 0 ? __b : Promise.all(__a_promises).then(() => __b);
           });
 
           await Promise.all(__promises);
@@ -314,25 +321,25 @@ class SubtemplateTest < Minitest::Test
     export default async function (locals) {
         var __output = [], __promises = [];
         
-        var __a = [];
-        __ejx_append(listenToRender(search, ['select', 'search'], selection => {
-            var __b = [];
+        var __a_result = listenToRender(search, ['select', 'search'], selection => {
+            var __b_promises = [];
             var __c = [];
-            __ejx_append(new Form(address, f => {
-                var __d = [];
-                var __e = document.createElement("div");
-                __e.setAttribute("class", "");
-                __ejx_append(f.label('local_part', 'Street', {class:'text-bold block'}), __e, true, __promises);
-                __ejx_append(" ", __e, false, __promises);
-                __ejx_append(f.text('local_part', {class:'uniformInput width-full'}), __e, true, __promises);
-                __ejx_append(" ", __e, false, __promises);
-                __ejx_append(__e, __d, false, __promises);
-                __c.push(__d);
-                return __d;
-            }), __b, true, __promises, __c);
-            __a.push(__b);
-            return __b;
-        }), __output, true, __promises, __a);
+            var __d_result = new Form(address, f => {
+                var __e_promises = [];
+                var __f = [];
+                var __g = document.createElement("div");
+                __g.setAttribute("class", "");
+                __ejx_append(f.label('local_part', 'Street', {class:'text-bold block'}), __g, 'escape', __e_promises);
+                __ejx_append(" ", __g, 'unescape', __e_promises);
+                __ejx_append(f.text('local_part', {class:'uniformInput width-full'}), __g, 'escape', __e_promises);
+                __ejx_append(" ", __g, 'unescape', __e_promises);
+                __ejx_append(__g, __f, 'unescape', __e_promises);
+                return Promise.all(__e_promises).then(() => __f);
+            });
+            __ejx_append(__d_result, __c, 'escape', __b_promises);
+            return Promise.all(__b_promises).then(() => __c);
+    });
+        __ejx_append(__a_result, __output, 'escape', __promises);
 
         await Promise.all(__promises);
         return __output;
@@ -354,15 +361,16 @@ class SubtemplateTest < Minitest::Test
           var __output = [], __promises = [];
           
           const table = createElement('table', {children: () => {
-              var __a = [];
-              var __b = document.createElement("tr");
-              var __c = document.createElement("td");
-              __ejx_append("Hello World", __c, false, __promises);
-              __ejx_append(__c, __b, false, __promises);
-              __ejx_append(__b, __a, false, __promises);
-              return __a;
-          }});
-          __ejx_append(table, __output, true, __promises);
+              var __a_promises = [];
+              var __b = [];
+              var __c = document.createElement("tr");
+              var __d = document.createElement("td");
+              __ejx_append("Hello World", __d, 'unescape', __a_promises);
+              __ejx_append(__d, __c, 'unescape', __a_promises);
+              __ejx_append(__c, __b, 'unescape', __a_promises);
+              return __a_promises.length === 0 ? __b : Promise.all(__a_promises).then(() => __b);
+      }});
+      __ejx_append(table, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;

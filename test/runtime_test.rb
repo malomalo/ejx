@@ -55,12 +55,16 @@ class RuntimeTest < Minitest::Test
       
       let result = template(#{JSON.generate(locals)})
 
+      if (result instanceof Array) {
+        result = Promise.all(result);
+      }
+      
       if (result instanceof Promise) {
         result.then((result) => {
           console.log(JSON.stringify({result: toHTML(result)}));
           process.exit(0);
         }, (e) => {
-          console.log(JSON.stringify({error: [e.name, e.message]}));
+          console.log(JSON.stringify({error: [e.name, e.message, e.stack]}));
           process.exit(1);
         });
       } else {
@@ -228,21 +232,35 @@ class RuntimeTest < Minitest::Test
 
   test "a nested async iterater subtemplate" do
     t1 = template(<<~EJX)
-      <% const matrix = [new Promise(x => x([new Promise(r => r(1)),2])), {
-        forEach: iterator => [3,new Promise(r => r(4))].forEach(iterator)
-      }] %>
+      <% const matrix = [
+        new Promise(x => setTimeout(() => x([
+          new Promise(r => setTimeout(() => r(1), 5)),
+          2
+        ]), 5)),
+        {
+          forEach: iterator => new Promise(r => {
+            [
+              new Promise(r => setTimeout(() => r(3), 5)),
+              new Promise(r => setTimeout(() => r(4), 5))
+            ].forEach(iterator)
+            r()
+          })
+        }
+      ] %>
       <table>
       <% matrix.forEach(async (row) => { %>
         <tr>
-        <% (await row).forEach(async cell => { %>
-          <td><%= await cell %></td>
+        <% row = await row %>
+        <% row.forEach(async cell => { %>
+          <% const v = await cell %>
+          <td><%= v %></td>
         <% }) %>
         </tr>
       <% }) %>
       </table>
     EJX
 
-    assert_equal([" ", "<table><tr><td>1 </td><td>2 </td></tr><tr><td>3 </td><td>4 </td></tr></table>"], render(t1))
+    assert_equal([" ", "<table><tr> <td>1 </td> <td>2 </td></tr><tr> <td>3 </td> <td>4 </td></tr></table>"], render(t1))
   end
 
   test "an forEach with an async subtemplate" do
@@ -254,10 +272,12 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
   end
-  
+
   test "an map with an async subtemplate" do
     t1 = template(<<~EJX)
-      <%= [new Promise(r => r(1)),2].map(async (i) => { %>
+      <%= [new Promise(r => {
+          setTimeout(() => r(1), 5)
+        }),2].map(async (i) => { %>
         <span><%= await i %></span>
       <% }) %>
     EJX
@@ -272,8 +292,143 @@ class RuntimeTest < Minitest::Test
         <span><%= await i %></span>
       <% }) %>
     EJX
-    
+
     assert_equal(['<span>1 </span>', '<span>2 </span>'], render(t1))
+  end
+
+  test "multiple sub templates" do
+    t1 = template(<<~EJX)
+      <% function formTag (a, b) { return [a(), b()]; } %>
+      <%= formTag(function () { %>
+        <input type="text" >
+      <% }, function () { %>
+        <input type="submit" />
+      <% }) %>
+    EJX
+
+    assert_equal(['<input type="text">', '<input type="submit">'], render(t1))
+  end
+
+  test 'assignment test' do
+    t1 = template(<<~EJX)
+      <% async function createElement(elName, template) {
+        var el = document.createElement(elName);
+        el.append(...await template.children())
+        return el;
+      } %>
+
+      <% const expense_table = createElement('table', {children: () => { %>
+          <tr>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Year</th>
+              <th></th>
+          </tr>
+      <% }}) %>
+
+      <%= expense_table %>
+    EJX
+
+    assert_equal(["<table><tr><th>Type</th><th>Amount</th><th>Year</th><th></th></tr></table>"], render(t1))
+  end
+
+  test 'another subtemplate test' do
+    t1 = template(<<~EJX)
+      <% var survey = {
+            listings: {
+              forEach: (fn) => { [
+                {id: 1, attachments: { forEach: (fn) => [3,4].forEach(fn) }},
+                {id: 2, attachments: { forEach: (fn) => [5,6].forEach(fn) }}
+              ].forEach(fn) }
+            }
+      } %>
+
+      <pages>
+      <% survey.listings.forEach(async listing => { %>
+          <page><%= listing.id %></page>
+          <% await listing.attachments.forEach(async attachment => { %>
+            <subpage><%= attachment %></subpage>
+          <% }) %>
+      <% }) %>
+      </pages>
+    EJX
+
+    assert_equal([" ", "<pages><page>1 </page><subpage>3 </subpage><subpage>4 </subpage><page>2 </page><subpage>5 </subpage><subpage>6 </subpage></pages>"], render(t1))
+  end
+
+  test 'outputing a function that returns objects' do
+    t1 = template(<<~EJX)
+      <%  var x = [
+            1,
+            new Promise(r => { setTimeout(() => r(2), 5) })
+          ];
+
+      async function maskableTag(i, template) {
+        const container = document.createElement('tr')
+        container.append(...(await template(i)))
+        return container;
+      }
+       %>
+
+        <%= x.map((i) => { %>
+          <%= maskableTag(i, (a) => { %>
+            <%= a %>
+          <% }) %>
+        <% }) %>
+    EJX
+
+    assert_equal(["<tr>1</tr>", "<tr>2</tr>"], render(t1))
+  end
+  
+  test "subtemplate is an option of a function" do
+    t1 = template(<<~EJX)
+    <% const createElement = (tagName, options) => {
+      const tag = document.createElement(tagName)
+      const content = options.content()
+      content.forEach(el => tag.append(el))
+      return tag;
+    } %>
+    <%= const table = createElement('table', {content: () => { %>
+        <tr>
+            <th></th>
+            <th>Tenant</th>
+            <th>Occupied Space</th>
+            <th></th>
+        </tr>
+    <% }}) %>
+    EJX
+    
+    assert_equal(['<table><tr><th></th><th>Tenant</th><th>Occupied Space</th><th></th></tr></table>'], render(t1))
+  end
+  
+  test "rendering a proxy of a function" do
+    t1 = template(<<~EJX)
+    <%
+    function neverEndingProxy(target) {
+        return new Proxy(function () {}, {
+            get: (fn, prop, receiver) => {
+                if ( prop === 'then' ) {
+                    return target.then.bind(target);
+                } else {
+                    return neverEndingProxy(target.then(t => {
+                        if (typeof t[prop] === 'function') {
+                            return t[prop].bind(t);
+                        } else {
+                            return t[prop];
+                        }
+                    }));
+                }
+            },
+            apply: (fn, thisArg, args) => {
+                return neverEndingProxy(target.then((t) => t(...args)));
+            }
+        });
+    }
+    %>Hello<span><%= neverEndingProxy(new Promise(r => {
+        r({first_name: 'Rod Kimble'})
+      })).first_name %></span>World
+    EJX
+    assert_equal(["Hello", "<span>Rod Kimble </span>", "World"], render(t1))
   end
 end
 
@@ -297,9 +452,13 @@ class Node
 
         stdout, stderr, status = Open3.capture3(binary, scriptfile.path)
 
+        STDERR.puts stderr if !stderr.empty?
         if status.success?
-          STDERR.puts stderr if !stderr.empty?
-          JSON.parse(stdout)['result']
+          begin
+            JSON.parse(stdout)['result']
+          rescue
+            puts stdout, stderr
+          end
         else
           begin
             result = JSON.parse(stdout)['error']

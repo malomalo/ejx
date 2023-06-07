@@ -13,7 +13,7 @@ class HTMLTagInterpolationTest < Minitest::Test
           
           var __a = document.createElement("div");
           __a.setAttribute("class", klass);
-          __ejx_append(__a, __output, false, __promises);
+          __ejx_append(__a, __output, 'unescape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -32,7 +32,7 @@ class HTMLTagInterpolationTest < Minitest::Test
           
           var __a = document.createElement("div");
           __a.setAttribute("class", klass);
-          __ejx_append(__a, __output, false, __promises);
+          __ejx_append(__a, __output, 'unescape', __promises);
 
           await Promise.all(__promises);
           return __output;
