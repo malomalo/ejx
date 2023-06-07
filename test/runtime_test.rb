@@ -400,6 +400,36 @@ class RuntimeTest < Minitest::Test
     
     assert_equal(['<table><tr><th></th><th>Tenant</th><th>Occupied Space</th><th></th></tr></table>'], render(t1))
   end
+  
+  test "rendering a proxy of a function" do
+    t1 = template(<<~EJX)
+    <%
+    function neverEndingProxy(target) {
+        return new Proxy(function () {}, {
+            get: (fn, prop, receiver) => {
+                if ( prop === 'then' ) {
+                    return target.then.bind(target);
+                } else {
+                    return neverEndingProxy(target.then(t => {
+                        if (typeof t[prop] === 'function') {
+                            return t[prop].bind(t);
+                        } else {
+                            return t[prop];
+                        }
+                    }));
+                }
+            },
+            apply: (fn, thisArg, args) => {
+                return neverEndingProxy(target.then((t) => t(...args)));
+            }
+        });
+    }
+    %>Hello<span><%= neverEndingProxy(new Promise(r => {
+        r({first_name: 'Rod Kimble'})
+      })).first_name %></span>World
+    EJX
+    assert_equal(["Hello", "<span>Rod Kimble </span>", "World"], render(t1))
+  end
 end
 
 
