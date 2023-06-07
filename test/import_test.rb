@@ -21,16 +21,16 @@ class ImportTest < Minitest::Test
       export default async function (locals) {
           var __output = [], __promises = [];
           
-          var __a = [];
-          __ejx_append(x(function () {
-              var __b = [];
-              var __c = document.createElement("input");
-              __c.setAttribute("type", "submit");
-              __ejx_append(__c, __b, false, __promises);
-              __ejx_append(a, __b, true, __promises);
-              __a.push(__b);
-              return __b;
-          }), __output, true, __promises, __a);
+          var __a_result = x(function () {
+              var __b_promises = [];
+              var __c = [];
+              var __d = document.createElement("input");
+              __d.setAttribute("type", "submit");
+              __ejx_append(__d, __c, 'unescape', __b_promises);
+              __ejx_append(a, __c, 'escape', __b_promises);
+              return Promise.all(__b_promises).then(() => __c);
+      });
+          __ejx_append(__a_result, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;

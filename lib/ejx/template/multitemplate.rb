@@ -28,7 +28,7 @@ class EJX::Template::Multitemplate < EJX::Template::Subtemplate
     if already_assigned
       output << ";\n#{' '*indentation}__ejx_append(#{output_var}, #{append}, 'escape', __promises);\n"
     else
-      output << ", #{append}, true, __promises);\n"
+      output << ", #{append}, 'escape', __promises);\n"
     end
 
     output

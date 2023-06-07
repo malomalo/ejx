@@ -12,7 +12,7 @@ class CompilationTest < Minitest::Test
           var __output = [], __promises = [];
           
           __output.push("Hello ");
-          __ejx_append(name, __output, true, __promises);
+          __ejx_append(name, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -96,9 +96,9 @@ class CompilationTest < Minitest::Test
       export default async function (locals) {
           var __output = [], __promises = [];
           
-          __ejx_append(1, __output, true, __promises);
+          __ejx_append(1, __output, 'escape', __promises);
           __output.push(" ");
-          __ejx_append(2, __output, true, __promises);
+          __ejx_append(2, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -118,11 +118,11 @@ class CompilationTest < Minitest::Test
       export default async function (locals) {
           var __output = [], __promises = [];
           
-          __ejx_append(1, __output, true, __promises);
+          __ejx_append(1, __output, 'escape', __promises);
           __output.push(" ");
           var __a = document.createElement("span");
-          __ejx_append("span", __a, false, __promises);
-          __ejx_append(__a, __output, false, __promises);
+          __ejx_append("span", __a, 'unescape', __promises);
+          __ejx_append(__a, __output, 'unescape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -144,18 +144,26 @@ class CompilationTest < Minitest::Test
       export default async function (locals) {
           var __output = [], __promises = [];
           
-          var __a = [];
-          __ejx_append(records.forEach((record) => {
-              var __b = [];
-              var __c = document.createElement("input");
-              __c.setAttribute("type", "text");
-              __ejx_append(__c, __b, false, __promises);
-              var __d = document.createElement("input");
-              __d.setAttribute("type", "submit");
-              __ejx_append(__d, __b, false, __promises);
-              __a.push(__b);
-              return __b;
-          }), __output, true, __promises, __a);
+          var __a_results = [];
+          var __a_promises = [];
+          var __a_result = records.forEach((...__args) => {
+              var __b_results = [];
+              var __b_promises = [];
+              var __b_result = ((record) => {
+                  var __c = [];
+                  var __d = document.createElement("input");
+                  __d.setAttribute("type", "text");
+                  __ejx_append(__d, __c, 'unescape', __b_promises);
+                  var __e = document.createElement("input");
+                  __e.setAttribute("type", "submit");
+                  __ejx_append(__e, __c, 'unescape', __b_promises);
+                  __b_results.push(__c);
+                  return Promise.all(__b_promises).then(() => __c);
+              })(...__args);
+              __ejx_append(__b_results, __a_results, 'escape', __a_promises, __b_result);
+              return __b_result;
+          });
+          __ejx_append(__a_results.flat(1), __output, 'escape', __promises, (__a_result instanceof Promise) ? __a_result.then(() => Promise.all(__a_promises).then(r => r.flat(1))) : Promise.all(__a_promises).then(r => r.flat(1)));
 
           await Promise.all(__promises);
           return __output;
@@ -173,7 +181,7 @@ class CompilationTest < Minitest::Test
           var __output = [], __promises = [];
           
           __output.push("Hello ");
-          __ejx_append(x(), __output, true, __promises);
+          __ejx_append(x(), __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -192,7 +200,7 @@ class CompilationTest < Minitest::Test
           
           __output.push("Hello ");
           var x = 2;
-          __ejx_append(x, __output, true, __promises);
+          __ejx_append(x, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -209,7 +217,7 @@ class CompilationTest < Minitest::Test
           
           __output.push("Hello ");
           var longer_var_name = 2;
-          __ejx_append(longer_var_name, __output, true, __promises);
+          __ejx_append(longer_var_name, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -228,7 +236,7 @@ class CompilationTest < Minitest::Test
           
           __output.push("Hello ");
           let x = 2;
-          __ejx_append(x, __output, true, __promises);
+          __ejx_append(x, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -245,7 +253,7 @@ class CompilationTest < Minitest::Test
           
           __output.push("Hello ");
           let x = 2;
-          __ejx_append(x, __output, true, __promises);
+          __ejx_append(x, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -264,7 +272,7 @@ class CompilationTest < Minitest::Test
           
           __output.push("Hello ");
           const x = 2;
-          __ejx_append(x, __output, true, __promises);
+          __ejx_append(x, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -281,7 +289,7 @@ class CompilationTest < Minitest::Test
           
           __output.push("Hello ");
           const x = 2;
-          __ejx_append(x, __output, true, __promises);
+          __ejx_append(x, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -299,7 +307,7 @@ class CompilationTest < Minitest::Test
           var __output = [], __promises = [];
           
           __output.push("Hello ");
-          __ejx_append(el(() => { var x = 2; let y = 3; const z = 4; return 5; }, __output, true, __promises);
+          __ejx_append(el(() => { var x = 2; let y = 3; const z = 4; return 5; }, __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -339,8 +347,8 @@ class CompilationTest < Minitest::Test
           __c.setAttribute("class", "uniformFloatingLabel");
           var __d = document.createElement("label");
           __d.setAttribute("for", "email_address");
-          __ejx_append("Email Address", __d, false, __promises);
-          __ejx_append(__d, __c, false, __promises);
+          __ejx_append("Email Address", __d, 'unescape', __promises);
+          __ejx_append(__d, __c, 'unescape', __promises);
           var __e = document.createElement("input");
           __e.setAttribute("type", "text");
           __e.setAttribute("class", "pad-2x width-100-p");
@@ -348,17 +356,17 @@ class CompilationTest < Minitest::Test
           __e.setAttribute("value", "");
           __e.setAttribute("id", "email_address");
           __e.setAttribute("autofocus", "");
-          __ejx_append(__e, __c, false, __promises);
-          __ejx_append(__c, __b, false, __promises);
-          __ejx_append(__b, __a, false, __promises);
+          __ejx_append(__e, __c, 'unescape', __promises);
+          __ejx_append(__c, __b, 'unescape', __promises);
+          __ejx_append(__b, __a, 'unescape', __promises);
           var __f = document.createElement("div");
           __f.setAttribute("class", "margin-v text-small text-center");
           var __g = document.createElement("button");
           __g.setAttribute("class", "reset js-reset-password text-gray-dark hover-blue");
-          __ejx_append("\\n            Forgot Password?\\n        ", __g, false, __promises);
-          __ejx_append(__g, __f, false, __promises);
-          __ejx_append(__f, __a, false, __promises);
-          __ejx_append(__a, __output, false, __promises);
+          __ejx_append("\\n            Forgot Password?\\n        ", __g, 'unescape', __promises);
+          __ejx_append(__g, __f, 'unescape', __promises);
+          __ejx_append(__f, __a, 'unescape', __promises);
+          __ejx_append(__a, __output, 'unescape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -393,8 +401,8 @@ class CompilationTest < Minitest::Test
           __b.setAttribute("fill", "none");
           __b.setAttribute("stroke", "blue");
           __b.setAttribute("stroke-width", "10");
-          __ejx_append(__b, __a, false, __promises);
-          __ejx_append(__a, __output, false, __promises);
+          __ejx_append(__b, __a, 'unescape', __promises);
+          __ejx_append(__a, __output, 'unescape', __promises);
 
           await Promise.all(__promises);
           return __output;

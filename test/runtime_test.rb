@@ -308,7 +308,7 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<input type="text">', '<input type="submit">'], render(t1))
   end
-  
+
   test 'assignment test' do
     t1 = template(<<~EJX)
       <% async function createElement(elName, template) {
@@ -458,7 +458,6 @@ class Node
             JSON.parse(stdout)['result']
           rescue
             puts stdout, stderr
-            puts '---'
           end
         else
           begin
