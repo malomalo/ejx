@@ -308,7 +308,28 @@ class RuntimeTest < Minitest::Test
 
     assert_equal(['<input type="text">', '<input type="submit">'], render(t1))
   end
+  
+  test "assigning a sub template" do
+    t1 = template(<<~EJX)
+    <% function subTemplateA (x) { %>
+      <a><%= x %></a>
+    <% } %>
+    <% const subTemplateB = function (x) { %>
+      <b><%= x %></b>
+    <% } %>
+    <% const subTemplateC = (x) => { %>
+      <c><%= x %></c>
+    <% } %>
+    <container>
+      <%= subTemplateA('hello') %>
+      <%= subTemplateB('world') %>
+      <%= subTemplateC('it is me') %>
+    </container>
+    EJX
 
+    assert_equal(['<container><a>hello </a> <b>world </b> <c>it is me </c> </container>'], render(t1))
+  end
+  
   test 'assignment test' do
     t1 = template(<<~EJX)
       <% async function createElement(elName, template) {

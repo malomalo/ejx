@@ -1,6 +1,6 @@
-class EJX::Template::Subtemplate
+class EJX::Template::Subtemplate < EJX::Template::Node
 
-  attr_reader :children, :modifiers
+  attr_reader :modifiers
   
   [:assigned_to_variable, :async, :append].each do |fn_name|
     attr_reader fn_name
@@ -19,17 +19,44 @@ class EJX::Template::Subtemplate
     @children = [opening]
     @modifiers = modifiers
     @append = append
+    @balance_stack = opening ? EJX::Template::BalanceScanner.parse(opening) : []
     
     @assigned_to_variable = @children.first&.match(/\A\s*(var|const|let)\s+(\S+)/)&.send(:[], 2)
     @async = false
     
-    if match = @children.first&.match(/(?:async\s+)?function\s*\([^\)]*\)\s*\{\s*\Z/m)
+    if match = @children.first&.match(/(?:async\s+)?function(:?\s+\w+)?\s*\([^\)]*\)\s*\{\s*\Z/m)
       @function_type = :regular
       @async = match[0].start_with?('async')
+      @assigned_to_variable = true if !match[1].nil?
     elsif match = @children.first&.match(/(?:async)?(?:\s*\([^\)\(]*\)|(?:(?<=\()|\s+)[^\(\s]+)?\s*=>\s*\{\s*\Z/m)
       @function_type = :arrow
       @async = match[0].start_with?('async')
     end
+  end
+  
+  def push(*values)
+    values.each do |value|
+      case value
+      when EJX::Template::JS
+        EJX::Template::BalanceScanner.parse(value.value, @balance_stack)
+      when String
+        EJX::Template::BalanceScanner.parse(value, @balance_stack)
+      end
+    end
+    
+    super
+  end
+
+  def balanced?
+    @balance_stack.empty?
+  end
+  
+  def balance
+    @balance_stack
+  end
+  
+  def ending_balance
+    @balance_stack.reverse.map { |i| EJX::Template::BalanceScanner::BALANCE[i] }
   end
 
   def to_js(indentation: 4, var_generator: nil, append: "__output", promises: '__promises')

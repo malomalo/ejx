@@ -1,12 +1,12 @@
-class EJX::Template::HTMLTag
+class EJX::Template::HTMLTag < EJX::Template::Node
 
   autoload :AttributeValue, File.expand_path('../html_tag/attribute_value', __FILE__)
   
-  attr_accessor :tag_name, :attrs, :children, :namespace
+  attr_accessor :tag_name, :attrs, :namespace
 
   def initialize
+    super
     @attrs = []
-    @children = []
   end
 
   def to_s
@@ -16,7 +16,7 @@ class EJX::Template::HTMLTag
   def inspect
     "#<EJX::HTMLTag:#{self.object_id} @tag_name=#{tag_name}>"
   end
-
+  
   def to_js(append: "__output", var_generator:, indentation: 4, namespace: nil, promises: '__promises')
     namespace ||= self.namespace
     
