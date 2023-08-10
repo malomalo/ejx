@@ -46,6 +46,52 @@ class SubtemplateTest < Minitest::Test
     JS
   end
 
+  test "a subtemplate declared as a function" do
+    result = EJX.compile(<<~DATA)
+      <% function formTag (template) { %>
+          <form><%= template() %></form>
+      <%  } %>
+
+      <%- formTag(function () { %>
+        <input type="text" >
+        <input type="submit" />
+      <% }) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function (locals) {
+          var __output = [], __promises = [];
+          
+          function formTag (template) {
+              var __a_promises = [];
+              var __b = [];
+              var __c = document.createElement("form");
+              __ejx_append(template(), __c, 'escape', __a_promises);
+              __ejx_append(" ", __c, 'unescape', __a_promises);
+              __ejx_append(__c, __b, 'unescape', __a_promises);
+              return __a_promises.length === 0 ? __b : Promise.all(__a_promises).then(() => __b);
+          };
+          var __d_result = formTag(function () {
+              var __e_promises = [];
+              var __f = [];
+              var __g = document.createElement("input");
+              __g.setAttribute("type", "text");
+              __ejx_append(__g, __f, 'unescape', __e_promises);
+              var __h = document.createElement("input");
+              __h.setAttribute("type", "submit");
+              __ejx_append(__h, __f, 'unescape', __e_promises);
+              return Promise.all(__e_promises).then(() => __f);
+      });
+          __ejx_append(__d_result, __output, 'escape', __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+
   test "a iterater subtemplate" do
     result = EJX.compile(<<~DATA)
       <% [1,2].forEach((i) => { %>

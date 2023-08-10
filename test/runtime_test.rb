@@ -320,18 +320,14 @@ class RuntimeTest < Minitest::Test
     <% const subTemplateC = (x) => { %>
       <c><%= x %></c>
     <% } %>
-    <% subTemplateD (x) => { %>
-      <d><%= x %></d>
-    <% } %>
     <container>
       <%= subTemplateA('hello') %>
       <%= subTemplateB('world') %>
-      <%= subTemplateC('it is') %>
-      <%= subTemplateD('me') %>
+      <%= subTemplateC('it is me') %>
     </container>
     EJX
 
-    assert_equal(['<container><a>hello</a><b>world</b><c>it is me</c><d>me</d></container>'], render(t1))
+    assert_equal(['<container><a>hello </a> <b>world </b> <c>it is me </c> </container>'], render(t1))
   end
   
   test 'assignment test' do

@@ -1,3 +1,5 @@
+require 'stream_parser'
+
 class EJX::Template
 
   autoload :JS, File.expand_path('../template/js', __FILE__)
@@ -5,17 +7,16 @@ class EJX::Template
   autoload :String, File.expand_path('../template/string', __FILE__)
   autoload :HTMLTag, File.expand_path('../template/html_tag', __FILE__)
   autoload :HTMLComment, File.expand_path('../template/html_comment', __FILE__)
-  autoload :ParseHelpers, File.expand_path('../template/parse_helpers', __FILE__)
   autoload :Subtemplate, File.expand_path('../template/subtemplate', __FILE__)
   autoload :Multitemplate, File.expand_path('../template/multitemplate', __FILE__)
   autoload :VarGenerator, File.expand_path('../template/var_generator', __FILE__)
+  autoload :Node, File.expand_path('../template/node', __FILE__)
+  autoload :BalanceScanner, File.expand_path('../template/balance_scanner', __FILE__)
   
-  include EJX::Template::ParseHelpers
-  
-  attr_accessor :source
+  include StreamParser
   
   def initialize(source, options={})
-    @source = source.strip
+    super(source.strip)
 
     @js_start_tags = [options[:open_tag] || EJX.settings[:open_tag]]
     @html_start_tags = ['<']
@@ -29,11 +30,10 @@ class EJX::Template
     @close_tag_modifiers = EJX.settings[:close_tag_modifiers].merge(options[:close_tag_modifiers] || {})
     
     @escape = options[:escape]
-    process
+    parse
   end
 
-  def process
-    seek(0)
+  def parse
     @tree =   [EJX::Template::Base.new(escape: @escape)]
     @stack =  [:str]
     
@@ -42,16 +42,17 @@ class EJX::Template
       when :str
         scan_until(Regexp.new("(#{@start_tags.map{|s| Regexp.escape(s) }.join('|')}|\\z)"))
         if !pre_match.strip.empty?
-          @tree.last.children << EJX::Template::String.new(pre_match)
+          @tree.last << EJX::Template::String.new(pre_match)
         end
         
-        if !matched.nil?
+        if !match.nil?
           if peek(3) == '!--'
             scan_until('!--')
             @stack << :html_comment
-          elsif @js_start_tags.include?(matched)
+          elsif @js_start_tags.include?(match)
+            # @stack.pop
             @stack << :js
-          elsif @html_start_tags.include?(matched)
+          elsif @html_start_tags.include?(match)
             @stack << :html_tag
           end
         end
@@ -60,7 +61,7 @@ class EJX::Template
         scan_until(Regexp.new("(#{@js_close_tags.map{|s| Regexp.escape(s) }.join('|')})"))
         pm = pre_match
         open_modifier = @open_tag_modifiers.find { |k,v| pm.start_with?(v) }&.first
-        close_modifier = @close_tag_modifiers.find { |k,v| matched.end_with?(v) }&.first
+        close_modifier = @close_tag_modifiers.find { |k,v| match.end_with?(v) }&.first
         pm.slice!(0, open_modifier[1].size) if open_modifier
         pm.slice!(pm.size - close_modifier[1].size, close_modifier[1].size) if close_modifier
         
@@ -69,35 +70,39 @@ class EJX::Template
           import += ';' if !import.end_with?(';')
           @tree.first.imports << import
           @stack.pop
-        elsif @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}.*\)/m) && !pm.match(/\{\s*\Z/m)
+        elsif @tree.last.is_a?(EJX::Template::Subtemplate) && EJX::Template::BalanceScanner.parse(pm) == @tree.last.ending_balance
+          #&& pm.match(/\A\s*\}/m) && !pm.match(/\{\s*\Z/m)
+
           subtemplate = @tree.pop
           if @tree.last.is_a?(EJX::Template::Multitemplate)
             multitemplate = @tree.pop
-            multitemplate.children << subtemplate << pm.strip
-            @tree.last.children << multitemplate
+            multitemplate << subtemplate << pm.strip
+            @tree.last << multitemplate
           else
-            subtemplate.children << pm.strip
-            @tree.last.children << subtemplate
+            subtemplate << pm.strip
+            @tree.last << subtemplate
           end
-          @stack.pop
-        elsif pm.match(/function\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
+          @stack.pop# if subtemplate.balanced?
+        elsif pm.match(/function\s*(:?\w+)?\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
           if @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}/m)
             template = @tree.pop
-            @tree << EJX::Template::Multitemplate.new(template.children.shift, template.modifiers, append: template.append)
+            multitemplate = EJX::Template::Multitemplate.new(template.children.shift, template.modifiers, append: template.append)
+            @tree << multitemplate
             subtemplate = EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
-            subtemplate.children.push(*template.children)
-            @tree.last.children << subtemplate << pm.strip
+            subtemplate.push(*template.children)
+            @tree.last << subtemplate << pm.strip
             @tree << EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
+            @tree.last.instance_variable_set(:@balance_stack, multitemplate.balance)
           elsif @tree.last.is_a?(EJX::Template::Multitemplate) && pm.match(/\A\s*\}/m)
-            @tree.last.children << pm.strip
-            @tree.last.children << EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
+            @tree.last << pm.strip
+            @tree.last << EJX::Template::Subtemplate.new(nil, [open_modifier, close_modifier].compact, append: false)
           else
             @tree << EJX::Template::Subtemplate.new(pm.strip, [open_modifier, close_modifier].compact, append: [:escape, :unescape].include?(open_modifier) || !pm.match?(/\A\s*(var|const|let)?\s*[^(]+\s*=/))
           end
           @stack.pop
         else
           if open_modifier != :comment && !pre_js.empty? && @tree.last.children.last.is_a?(EJX::Template::JS)
-            @tree.last.children << EJX::Template::String.new(' ')
+            @tree.last << EJX::Template::String.new(' ')
           end
           value = EJX::Template::JS.new(pm.strip, [open_modifier, close_modifier].compact)
 
@@ -112,60 +117,61 @@ class EJX::Template
             @tree.last.attrs << {@stack_info.last => value}
             @stack.pop
           else
-            @tree.last.children << value
+            @tree.last << value
           end
         end
       when :html_tag
         if @tree.last.children.last.is_a?(EJX::Template::JS)
-          @tree.last.children << EJX::Template::String.new(' ')
+          @tree.last << EJX::Template::String.new(' ')
         end
 
         scan_until(Regexp.new("(#{@js_start_tags.map{|s| Regexp.escape(s) }.join('|')}|\\/|[^\\s>]+)"))
-        if @js_start_tags.include?(matched)
+        if @js_start_tags.include?(match)
           @tree << EJX::Template::HTMLTag.new
           @stack << :js
-        elsif matched == '/'
+        elsif match == '/'
           @stack.pop
           @stack << :html_close_tag
         else
           @tree << EJX::Template::HTMLTag.new
-          @tree.last.tag_name = matched
+          @tree.last.tag_name = match
           @stack << :html_tag_attr_key
         end
       when :html_close_tag
         scan_until(Regexp.new("(#{@js_start_tags.map{|s| Regexp.escape(s) }.join('|')}|[^\\s>]+)"))
 
-        if @js_start_tags.include?(matched)
+        if @js_start_tags.include?(match)
           @stack << :js
         else
           el = @tree.pop
-          if el.tag_name != matched
-            raise EJX::TemplateError.new("Expected to close #{el.tag_name} tag, instead closed #{matched}\n#{cursor}")
+          if el.tag_name != match
+            raise EJX::TemplateError.new("Expected to close #{el.tag_name} tag, instead closed #{match}\n#{cursor}")
           end
-          @tree.last.children << el
+          @tree.last << el
           scan_until(Regexp.new("(#{@html_close_tags.map{|s| Regexp.escape(s) }.join('|')})"))
           @stack.pop
         end
       when :html_tag_attr_key
         scan_until(Regexp.new("(#{(@js_start_tags+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|[^\\s=>]+)"))
-        if @js_start_tags.include?(matched)
+        if @js_start_tags.include?(match)
           @stack << :js
-        elsif @html_close_tags.include?(matched)
-          if matched == '/>' || EJX::VOID_ELEMENTS.include?(@tree.last.tag_name)
+        elsif @html_close_tags.include?(match)
+          if match == '/>' || EJX::VOID_ELEMENTS.include?(@tree.last.tag_name)
             el = @tree.pop
-            @tree.last.children << el
+            @tree.last << el
             @stack.pop
             @stack.pop
           else
+            @stack.pop
             @stack << :str
           end
         else
-          key = if matched.start_with?('"') && matched.end_with?('"')
-            matched[1..-2]
-          elsif matched.start_with?('"') && matched.end_with?('"')
-            matched[1..-2]
+          key = if match.start_with?('"') && match.end_with?('"')
+            match[1..-2]
+          elsif match.start_with?('"') && match.end_with?('"')
+            match[1..-2]
           else
-            matched
+            match
           end
           @tree.last.attrs << key
           @stack << :html_tag_attr_value_tx
@@ -173,19 +179,19 @@ class EJX::Template
       when :html_tag_attr_value_tx
         scan_until(Regexp.new("(#{(@js_start_tags+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|=|\\S)"))
         tag_key = @tree.last.attrs.pop
-        if @js_start_tags.include?(matched)
+        if @js_start_tags.include?(match)
           @stack << :js
-        elsif @html_close_tags.include?(matched)
+        elsif @html_close_tags.include?(match)
           el = @tree.last
           el.attrs << tag_key
           if EJX::VOID_ELEMENTS.include?(el.tag_name)
             @tree.pop
-            @tree.last.children << el
+            @tree.last << el
           end
           @stack.pop
           @stack.pop
           @stack.pop
-        elsif matched == '='
+        elsif match == '='
           @stack.pop
           @tree.last.attrs << tag_key
           @stack << :html_tag_attr_value
@@ -198,24 +204,24 @@ class EJX::Template
       when :html_tag_attr_value
         scan_until(Regexp.new("(#{(@js_start_tags+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|'|\"|\\S+)"))
 
-        if @js_start_tags.include?(matched)
+        if @js_start_tags.include?(match)
           push(:js)
-        elsif matched == '"'
+        elsif match == '"'
           @stack.pop
           @stack << :html_tag_attr_value_double_quoted
-        elsif matched == "'"
+        elsif match == "'"
           @stack.pop
           @stack << :html_tag_attr_value_single_quoted
         else
           @stack.pop
           key = @tree.last.attrs.pop
-          @tree.last.namespace = matched if key == 'xmlns'
-          @tree.last.attrs << { key => matched }
+          @tree.last.namespace = match if key == 'xmlns'
+          @tree.last.attrs << { key => match }
         end
       when :html_tag_attr_value_double_quoted
         quoted_value = []
         scan_until(/("|\[\[=)/)
-        while matched == '[[='
+        while match == '[[='
           quoted_value << pre_match if !pre_match.strip.empty?
           scan_until(/\]\]/)
           quoted_value << EJX::Template::JS.new(pre_match.strip)
@@ -234,7 +240,7 @@ class EJX::Template
       when :html_tag_attr_value_single_quoted
         quoted_value = []
         scan_until(/('|\[\[=)/)
-        while matched == '[[='
+        while match == '[[='
           quoted_value << pre_match if !pre_match.strip.empty?
           scan_until(/\]\]/)
           quoted_value << EJX::Template::JS.new(pre_match.strip)
@@ -252,7 +258,7 @@ class EJX::Template
         @stack.pop
       when :html_comment
         scan_until('-->')
-        @tree.last.children << EJX::Template::HTMLComment.new(pre_match)
+        @tree.last << EJX::Template::HTMLComment.new(pre_match)
         @stack.pop
       end
     end

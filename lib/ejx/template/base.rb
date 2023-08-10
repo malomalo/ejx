@@ -1,13 +1,12 @@
-class EJX::Template::Base
+class EJX::Template::Base < EJX::Template::Node
   
-  attr_accessor :children, :imports
-
-  def initialize(escape: nil)
-    @children = []
-    @escape = escape
+  attr_accessor :imports
+  
+  def initialize(**options)
+    super
     @imports = []
   end
-
+  
   def to_module
     var_generator = EJX::Template::VarGenerator.new
     
