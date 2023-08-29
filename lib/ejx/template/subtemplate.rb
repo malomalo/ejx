@@ -46,6 +46,7 @@ class EJX::Template::Subtemplate < EJX::Template::Node
     
     super
   end
+  alias_method :<<, :push
 
   def balanced?
     @balance_stack.empty?

@@ -451,6 +451,20 @@ class RuntimeTest < Minitest::Test
     EJX
     assert_equal(["Hello", "<span>Rod Kimble </span>", "World"], render(t1))
   end
+  
+  test "if statement in a function" do
+    t1 = template(<<~EJX)
+    <% function renderer() { %>
+      <% if (true) { %>
+        <div>Hello World</div>
+      <% } else { %>
+        <div>NOT THIS</div>
+      <% } %>
+    <% } %>
+    <%= renderer() %>
+    EJX
+    assert_equal([" ", "<div>Hello World</div>"], render(t1))
+  end
 end
 
 

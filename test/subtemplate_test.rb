@@ -393,6 +393,47 @@ class SubtemplateTest < Minitest::Test
     JS
   end
   
+  test "output a subtemplate that assigns to a const with an if statement" do
+    result = EJX.compile(<<~DATA)
+      <% function renderer() { %>
+        <% if (true) { %>
+          <div>Hello World</div>
+        <% } else { %>
+          <div>NOT THIS</div>
+        <% } %>
+      <% } %>
+      <%= renderer() %>
+    DATA
+    assert_equal(<<~JS.strip, result.strip)
+    import {append as __ejx_append} from 'ejx';
+
+    export default async function (locals) {
+        var __output = [], __promises = [];
+        
+        function renderer() {
+            var __a_promises = [];
+            var __b = [];
+            if (true) {
+            __ejx_append(" ", __b, 'unescape', __a_promises);
+            var __c = document.createElement("div");
+            __ejx_append("Hello World", __c, 'unescape', __a_promises);
+            __ejx_append(__c, __b, 'unescape', __a_promises);
+            } else {
+            __ejx_append(" ", __b, 'unescape', __a_promises);
+            var __d = document.createElement("div");
+            __ejx_append("NOT THIS", __d, 'unescape', __a_promises);
+            __ejx_append(__d, __b, 'unescape', __a_promises);
+            }
+            return __a_promises.length === 0 ? __b : Promise.all(__a_promises).then(() => __b);
+        };
+        __ejx_append(renderer(), __output, 'escape', __promises);
+
+        await Promise.all(__promises);
+        return __output;
+    }
+    JS
+  end
+
   test "output a subtemplate that assigns to a const" do
     result = EJX.compile(<<~DATA)
       <%= const table = createElement('table', {children: () => { %>
