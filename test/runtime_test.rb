@@ -465,6 +465,14 @@ class RuntimeTest < Minitest::Test
     EJX
     assert_equal([" ", "<div>Hello World</div>"], render(t1))
   end
+  
+  test "html attribute interpolation" do
+    t1 = template(<<~EJX)
+    <% const foo = true %>
+    <div class="uniformLabel [[= foo ? 'disabled' : 'bold' ]] -yellow">Hello World</div>
+    EJX
+    assert_equal([" ", "<div class=\"uniformLabel disabled -yellow\">Hello World</div>"], render(t1))
+  end
 end
 
 
