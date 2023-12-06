@@ -12,7 +12,7 @@ class HTMLTagInterpolationTest < Minitest::Test
           var __output = [], __promises = [];
           
           var __a = document.createElement("div");
-          __a.setAttribute("class", [klass].join(""));
+          __a.setAttribute("class", klass);
           __ejx_append(__a, __output, 'unescape', __promises);
 
           await Promise.all(__promises);
@@ -31,7 +31,7 @@ class HTMLTagInterpolationTest < Minitest::Test
           var __output = [], __promises = [];
           
           var __a = document.createElement("div");
-          __a.setAttribute("class", [klass].join(""));
+          __a.setAttribute("class", klass);
           __ejx_append(__a, __output, 'unescape', __promises);
 
           await Promise.all(__promises);
@@ -55,7 +55,7 @@ class HTMLTagInterpolationTest < Minitest::Test
           const foo = true
           __output.push(" ");
           var __a = document.createElement("div");
-          __a.setAttribute("class", ["uniformLabel ", foo ? 'disabled' : 'bold', " -yellow"].join(""));
+          __a.setAttribute("class", "uniformLabel " + (foo ? 'disabled' : 'bold') + " -yellow");
           __ejx_append("Hello World", __a, 'unescape', __promises);
           __ejx_append(__a, __output, 'unescape', __promises);
 
