@@ -19,7 +19,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           formTag = function(template) {
@@ -61,7 +61,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           function formTag (template) {
@@ -102,7 +102,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           var __a_results = [];
@@ -137,7 +137,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
     import {append as __ejx_append} from 'ejx';
 
-    export default async function (locals) {
+    export default async function self (locals) {
         var __output = [], __promises = [];
         
         var __a_results = [];
@@ -183,7 +183,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           formTag = function(template) {
@@ -220,7 +220,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           var __a_result = formTag(function () {
@@ -254,7 +254,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __ejx_append(formTag(function () {
@@ -294,7 +294,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           formTag = function(template) {
@@ -331,7 +331,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           var x = [1,2].map((n) => {
@@ -364,7 +364,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
     import {append as __ejx_append} from 'ejx';
 
-    export default async function (locals) {
+    export default async function self (locals) {
         var __output = [], __promises = [];
         
         var __a_result = listenToRender(search, ['select', 'search'], selection => {
@@ -407,7 +407,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
     import {append as __ejx_append} from 'ejx';
 
-    export default async function (locals) {
+    export default async function self (locals) {
         var __output = [], __promises = [];
         
         function renderer() {
@@ -444,7 +444,7 @@ class SubtemplateTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           const table = createElement('table', {children: () => {

@@ -26,7 +26,7 @@ class CustomSettingsTest < Minitest::Test
     assert_equal(<<~JS.strip, result)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");

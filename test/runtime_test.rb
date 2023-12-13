@@ -473,6 +473,13 @@ class RuntimeTest < Minitest::Test
     EJX
     assert_equal([" ", "<div class=\"uniformLabel disabled -yellow\">Hello World</div>"], render(t1))
   end
+  
+  test "self" do
+    t = template(<<~EJX)
+      <div>Hello<% if (nest) { %><%= self({nest: false})<% } %></div>
+      assert_equal([" ", "<div>Hello<div>Hello</div></div>"], render(t1))
+    EJX
+  end
 end
 
 
