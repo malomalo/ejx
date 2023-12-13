@@ -12,6 +12,7 @@ The EJX tag syntax is as follows:
 * `<%= ... %>` evaluates the expression inside the tags, escapes and inserts it
                into the template output.
 * `<%- ... %>` behaves like `<%= ... %>` but does not escape it's output.
+* `self` references the template function
 
 The functions compiled with EJX will return an array containing `Node` objects
 and/or `DOMString` which can be appended to a Node via `Node.append(...)`
@@ -25,7 +26,7 @@ To compile an EJX template into a Javascript module pass the template to `EJX.co
     EJX.compile("Hello <span><%= name %></span>")
     # => import {append as __ejx_append} from 'ejx';
     # => 
-    # => export default async function (locals) {
+    # => export default async function self (locals) {
     # =>     var __output = [], __promises = [];
     # => 
     # =>     __output.push("Hello ");
@@ -59,7 +60,7 @@ generates:
 ```js
 import {append as __ejx_append} from 'ejx';
 
-export default async function (locals) {
+export default async function self (locals) {
     var __output = [], __promises = [];
   
     formTag = function(template) {

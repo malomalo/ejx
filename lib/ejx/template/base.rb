@@ -20,7 +20,7 @@ class EJX::Template::Base < EJX::Template::Node
       output << import << "\n"
     end
     
-    output << "\nexport default async function (locals) {\n"
+    output << "\nexport default async function self (locals) {\n"
     output << "    var __output = [], __promises = [];\n    \n"
     
     @children.each do |child|

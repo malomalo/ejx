@@ -8,7 +8,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -26,7 +26,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -50,7 +50,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -71,7 +71,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -93,7 +93,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __ejx_append(1, __output, 'escape', __promises);
@@ -115,7 +115,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __ejx_append(1, __output, 'escape', __promises);
@@ -141,7 +141,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           var __a_results = [];
@@ -177,7 +177,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -195,7 +195,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -212,7 +212,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -231,7 +231,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -248,7 +248,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -267,7 +267,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -284,7 +284,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -303,7 +303,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -336,7 +336,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
 
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           var __a = document.createElement("form");
@@ -384,7 +384,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           var __a = document.createElementNS("http://www.w3.org/2000/svg", "svg");

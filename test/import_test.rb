@@ -18,7 +18,7 @@ class ImportTest < Minitest::Test
       import x from y;
       import a from z;
 
-      export default async function (locals) {
+      export default async function self (locals) {
           var __output = [], __promises = [];
           
           var __a_result = x(function () {
