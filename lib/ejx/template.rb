@@ -101,6 +101,7 @@ class EJX::Template
           end
           @stack.pop
         else
+          puts 2
           if open_modifier != :comment && !pre_js.empty? && @tree.last.children.last.is_a?(EJX::Template::JS)
             @tree.last << EJX::Template::String.new(' ')
           end
