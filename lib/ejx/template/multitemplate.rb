@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 class EJX::Template::Multitemplate < EJX::Template::Subtemplate
 
   def to_js(indentation: 4, var_generator: nil, append: "__output", promises: '__promises')
     already_assigned = @children.first =~ /\A\s*(var|const|let)\s+(\S+)/
     output_var = $2
-    output = ""
+    output = String.new
     if already_assigned# || !@append
       output << "#{' '*indentation}#{@children.first}\n"
     else

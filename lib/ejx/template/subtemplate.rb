@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class EJX::Template::Subtemplate < EJX::Template::Node
 
   attr_reader :modifiers
@@ -61,7 +63,7 @@ class EJX::Template::Subtemplate < EJX::Template::Node
   end
 
   def to_js(indentation: 4, var_generator: nil, append: "__output", promises: '__promises')
-    output = ''
+    output = String.new
 
     global_output_var = var_generator.next if !assigned_to_variable?
     sub_global_output_var = var_generator.next

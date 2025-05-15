@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class EJX::Template::HTMLTag < EJX::Template::Node
 
   autoload :AttributeValue, File.expand_path('../html_tag/attribute_value', __FILE__)

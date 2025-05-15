@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class EJX::Template::JS
   
   attr_reader :value

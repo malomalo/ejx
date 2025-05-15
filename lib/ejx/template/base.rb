@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class EJX::Template::Base < EJX::Template::Node
   
   attr_accessor :imports
@@ -13,7 +15,7 @@ class EJX::Template::Base < EJX::Template::Node
     output = if @escape
       "import {" + @escape.split('.').reverse.join(" as __ejx_append} from '") + "';\n"
     else
-      "import {append as __ejx_append} from 'ejx';\n"
+      String.new("import {append as __ejx_append} from 'ejx';\n")
     end
     
     @imports.each do |import|
