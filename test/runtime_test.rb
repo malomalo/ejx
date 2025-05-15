@@ -6,6 +6,12 @@ class RuntimeTest < Minitest::Test
   def setup
     @node = Node.new(File.expand_path('../..', __FILE__))
     @node.npm_install('jsdom', 'jsdom-global')
+    
+    # Tempfiles can get cleaned up to fast on some of the
+    # newer Rubies that by the time node get to it it will
+    # be deleteated, so we need to keep the reference around
+    # so that it get cleaned up after the test have finished
+    @files = []
   end
 
   def helpers
@@ -13,15 +19,16 @@ class RuntimeTest < Minitest::Test
 
     @ejx_helpers = Tempfile.open(['helpers', '.mjs'])
     @ejx_helpers.write(File.read(File.join(EJX::ASSET_DIR, 'ejx.js')))
-    @ejx_helpers.flush
+    @ejx_helpers.fsync
     @ejx_helpers.path
   end
 
   def template(source)
-    file = Tempfile.open(['template', '.mjs'])
+    file = Tempfile.open(['template', '.mjs'], @tmpdir)
     file.write(EJX.compile(source).gsub(" from 'ejx';", " from '#{helpers}';"))
-    file.flush
-    file.path
+    file.fsync
+    @files << file
+    File.expand_path(file.path)
   end
 
   def render(template, locals={})
@@ -117,11 +124,13 @@ class RuntimeTest < Minitest::Test
     t1 = template(<<~EJX)
       <%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) }, 200); } ) %>
     EJX
+
     assert_equal(["<div></div>", "<div></div>"], render(t1))
 
     t2 = template(<<~EJX)
       <div><%= new Promise( (resolve) => { setTimeout(() => { resolve([document.createElement("div"), document.createElement("div")]) } , 200); } ) %></div>
     EJX
+
     assert_equal(["<div><div></div><div></div> </div>"], render(t2))
   end
 
@@ -498,7 +507,7 @@ class Node
     Dir.chdir(npm_path) do
       Tempfile.open(['script', '.mjs'], npm_path) do |scriptfile|
         scriptfile.write(script)
-        scriptfile.flush
+        scriptfile.fsync
 
         stdout, stderr, status = Open3.capture3(binary, scriptfile.path)
 
