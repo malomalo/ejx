@@ -40,6 +40,72 @@ To compile an EJX template into a Javascript module pass the template to `EJX.co
     JS
 ```
 
+Propshaft
+---------
+
+When used in a Rails app with Propshaft, this gem provides a compiler so you can import EJX templates directly from JavaScript. Place templates anywhere on your asset load paths with one of these extensions:
+
+- .ejx, .ejs
+- .ejx.html, .ejs.html
+- .html.ejx, .html.ejs
+
+Then import them like any other ES module:
+
+```js
+import template from "application/components/button.ejx";
+
+document.body.append(...(await template({ label: "Click me" })));
+```
+
+At boot, if Propshaft is present, the compiler registers automatically. The templates are compiled to JavaScript with a `.js` destination extension.
+
+Importmap
+---------
+
+This gem ships a Railtie that augments `importmap-rails` so EJX/EJS templates are discovered by `pin_all_from` and added to the import map. Supported source extensions:
+
+- `.ejx`, `.ejs`
+- `.ejx.html`, `.ejs.html`
+- `.html.ejx`, `.html.ejs`
+
+Usage in `config/importmap.rb` stays the same:
+
+```ruby
+pin_all_from "app/assets", under: "application"
+# Files like app/assets/application/components/button.html.ejx
+# are discovered and pinned. Importmap will point to the template path and
+# Propshaft serves compiled JavaScript with the correct content type.
+
+Additionally, the Railtie automatically pins the EJX runtime helper so compiled templates can import it:
+
+```ruby
+# Added automatically (no action needed):
+pin "ejx", to: "ejx.js"
+```
+
+JsBundling (esbuild)
+--------------------
+
+To compile EJX/EJS during jsbundling-rails builds with esbuild, this gem provides a generator that sets up an esbuild plugin and config:
+
+```bash
+bin/rails generate ejx:install_jsbundling
+npm run build        # or yarn build / bun run build
+```
+
+What it does:
+- Adds `esbuild-ejx-plugin.js` (compiles `.ejx`, `.ejs`, `.html.ejx`, `.html.ejs` via Ruby EJX)
+- Creates or updates `esbuild.config.mjs` to use the plugin
+- Updates `package.json` scripts to run the config
+- Vendors the EJX runtime to `app/javascript/vendor/ejx.js` and aliases the bare import `ejx` to it so compiled templates can `import { append } from 'ejx'`.
+
+Then you can import templates the same way:
+
+```js
+import template from "./templates/show.html.ejs";
+document.body.append(...(await template({ name: "World" })));
+```
+
 If a evalation tag (`<%=` or `<%-`) ends with an opening of a function, the
 function returns a compiled template. For example:
 
