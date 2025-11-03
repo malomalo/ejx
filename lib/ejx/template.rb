@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'stream_parser'
+require 'set'
 
 class EJX::Template
 
@@ -38,6 +39,8 @@ class EJX::Template
   def parse
     @tree =   [EJX::Template::Base.new(escape: @escape)]
     @stack =  [:str]
+    @declared_identifiers = Set.new(%w[__output __promises locals])
+    @used_identifiers = Set.new
     
     while !eos?
       case @stack.last
@@ -71,6 +74,23 @@ class EJX::Template
           import = pm.strip
           import += ';' if !import.end_with?(';')
           @tree.first.imports << import
+          # Track imported bindings as declared identifiers
+          if import =~ /^import\s+([^;\n]+?)\s+from\s+['"]/m
+            spec = $1.strip
+            if spec.start_with?('{')
+              spec.scan(/([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?/) { |a,b| @declared_identifiers << (b || a) }
+            elsif spec.start_with?('*')
+              if spec =~ /\bas\s+([A-Za-z_$][\w$]*)/
+                @declared_identifiers << $1
+              end
+            else
+              first, rest = spec.split(',', 2)
+              @declared_identifiers << first.strip if first
+              if rest && rest =~ /\{([^}]+)\}/
+                $1.scan(/([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?/) { |a,b| @declared_identifiers << (b || a) }
+              end
+            end
+          end
           @stack.pop
         elsif @tree.last.is_a?(EJX::Template::Subtemplate) && EJX::Template::BalanceScanner.parse(pm) == @tree.last.ending_balance
           #&& pm.match(/\A\s*\}/m) && !pm.match(/\{\s*\Z/m)
@@ -86,6 +106,37 @@ class EJX::Template
           end
           @stack.pop# if subtemplate.balanced?
         elsif pm.match(/function\s*(:?\w+)?\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
+          # Analyze identifiers in this JS block as well (opening of a subtemplate)
+          scan_src = pm.dup
+          scan_src.gsub!(%r{/\*[\s\S]*?\*/}m, '')
+          scan_src.gsub!(/(^|[^:])\/\/.*$/, '\\1')
+          scan_src.gsub!(%r{"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`}m, '')
+          scan_src.scan(/\b(?:var|let|const)\s+([^;\n]+)/) do |m|
+            m.first.split(',').each do |seg|
+              seg = seg.strip
+              if seg.start_with?('{') || seg.start_with?('[')
+                seg.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                name = seg.split('=')[0].to_s.strip
+                @declared_identifiers << name if name =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+          scan_src.scan(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/) { |m| @declared_identifiers << m.first }
+          scan_src.scan(/\(([^)]*)\)\s*=>/) do |m|
+            param_block = m.first.gsub(/[()]/, '')
+            param_block.split(',').each do |p|
+              p = p.strip
+              next if p.empty?
+              if p.start_with?('{') || p.start_with?('[')
+                p.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                @declared_identifiers << p if p =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+          scan_src.scan(/\b([A-Za-z_$][\w$]*)\s*=>/) { |m| @declared_identifiers << m.first }
+          scan_src.scan(/(?<!\.)\b([A-Za-z_$][\w$]*)\b/) { |m| @used_identifiers << m.first }
           if @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}/m)
             template = @tree.pop
             multitemplate = EJX::Template::Multitemplate.new(template.children.shift, template.modifiers, append: template.append)
@@ -107,6 +158,42 @@ class EJX::Template
             @tree.last << EJX::Template::String.new(' ')
           end
           value = EJX::Template::JS.new(pm.strip, [open_modifier, close_modifier].compact)
+          # Analyze identifiers in this JS block
+          scan_src = pm.dup
+          # remove comments and strings to avoid false positives
+          scan_src.gsub!(%r{/\*[\s\S]*?\*/}m, '')
+          scan_src.gsub!(/(^|[^:])\/\/.*$/, '\\1')
+          scan_src.gsub!(%r{"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`}m, '')
+          # var/let/const
+          scan_src.scan(/\b(?:var|let|const)\s+([^;\n]+)/) do |m|
+            m.first.split(',').each do |seg|
+              seg = seg.strip
+              if seg.start_with?('{') || seg.start_with?('[')
+                seg.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                name = seg.split('=')[0].to_s.strip
+                @declared_identifiers << name if name =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+          # function declarations
+          scan_src.scan(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/) { |m| @declared_identifiers << m.first }
+          # arrow params
+          scan_src.scan(/\(([^)]*)\)\s*=>/) do |m|
+            param_block = m.first.gsub(/[()]/, '')
+            param_block.split(',').each do |p|
+              p = p.strip
+              next if p.empty?
+              if p.start_with?('{') || p.start_with?('[')
+                p.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                @declared_identifiers << p if p =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+          scan_src.scan(/\b([A-Za-z_$][\w$]*)\s*=>/) { |m| @declared_identifiers << m.first }
+          # used identifiers, not preceded by dot
+          scan_src.scan(/(?<!\.)\b([A-Za-z_$][\w$]*)\b/) { |m| @used_identifiers << m.first }
 
           @stack.pop
           case @stack.last
@@ -267,6 +354,14 @@ class EJX::Template
   end
 
   def to_module
+    # Compute free identifiers and pass them to the base node for signature generation
+    js_keywords = %w[break case catch class const continue debugger default delete do else export extends finally for function if import in instanceof let new return super switch this throw try typeof var void while with yield await of]
+    builtins = %w[globalThis window self document console Math Date Array Object Number String Boolean RegExp Promise Map Set WeakMap WeakSet Symbol BigInt JSON Intl URL URLSearchParams location navigator]
+    ignore = (js_keywords + builtins).to_set
+    declared = @declared_identifiers || Set.new
+    used = @used_identifiers || Set.new
+    free_ids = used.reject { |id| ignore.include?(id) || id.start_with?('__') || declared.include?(id) }.to_a.sort
+    @tree.first.free_identifiers = free_ids
     @tree.first.to_module
   end
 
