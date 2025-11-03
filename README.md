@@ -40,6 +40,23 @@ To compile an EJX template into a Javascript module pass the template to `EJX.co
     JS
 ```
 
+Configuration Options
+---------------------
+
+EJX supports a small set of compile-time options. You can pass these via Ruby (`EJX.compile(source, options)`) or through the esbuild plugin (flat options on `ejxPlugin({ ... })`).
+
+| Option                 | Type    | Default    | Description                                                                                  | Example                         |
+|------------------------|---------|------------|----------------------------------------------------------------------------------------------|---------------------------------|
+| `open_tag`             | String  | `<%`       | Opening delimiter for EJX tags.                                                              | `'<{'`                          |
+| `close_tag`            | String  | `%>`       | Closing delimiter for EJX tags.                                                              | `'}>'`                          |
+| `open_tag_modifiers`   | Object  | `{ escape: '=', unescape: '-', comment: '#', literal: '%' }` | Maps prefix characters used right after `open_tag` to behaviors.                              | `{ escape: '=', unescape: '-' }`|
+| `close_tag_modifiers`  | Object  | `{ trim: '-', literal: '%' }` | Maps suffix characters used before `close_tag` to behaviors (e.g., `-` to trim).              | `{ trim: '-' }`                 |
+| `escape`               | String? | `nil`       | Custom append/escape import in the form `'<modulePath>.<exportName>'` used for output writes. | `'@app/ejx.append'`             |
+
+Notes:
+- Modifiers apply like: `<%=` (escape), `<%-` (unescape/raw), `<%#` (comment), `<%%` (literal tag). The `trim` close modifier is written before `close_tag`, e.g. `<% code -%>`.
+- When using the esbuild plugin, all flat keys passed to `ejxPlugin({ ... })` are forwarded to `EJX.compile`. The only reserved key is `ruby`, which selects the Ruby executable.
+
 Propshaft
 ---------
 
@@ -104,6 +121,32 @@ Then you can import templates the same way:
 ```js
 import template from "./templates/show.html.ejs";
 document.body.append(...(await template({ name: "World" })));
+```
+
+Configuring EJX options with esbuild
+------------------------------------
+
+Pass EJX options to the plugin in `esbuild.config.mjs`. These are forwarded to `EJX.compile(source, options)`:
+
+```js
+// esbuild.config.mjs
+import esbuild from 'esbuild'
+import ejxPlugin from './esbuild-ejx-plugin.js'
+
+const options = {
+  entryPoints: ["app/javascript/application.js"],
+  bundle: true,
+  outdir: "app/assets/builds",
+  plugins: [
+    ejxPlugin({
+      // All EJX options are supported (JSON-serializable)
+      open_tag: '<{',
+      close_tag: '}>'
+    })
+  ]
+}
+
+await esbuild.build(options)
 ```
 
 If a evalation tag (`<%=` or `<%-`) ends with an opening of a function, the
