@@ -8,7 +8,7 @@ class HTMLTagInterpolationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
 
-      export default async function self (locals) {
+      export default async function self ({ klass } = {}) {
           var __output = [], __promises = [];
           
           var __a = document.createElement("div");
@@ -27,7 +27,7 @@ class HTMLTagInterpolationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
 
-      export default async function self (locals) {
+      export default async function self ({ klass } = {}) {
           var __output = [], __promises = [];
           
           var __a = document.createElement("div");
