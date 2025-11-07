@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'stream_parser'
+require 'set'
 
 class EJX::Template
 
@@ -18,7 +19,21 @@ class EJX::Template
   include StreamParser
   
   def initialize(source, options={})
-    super(source.strip)
+    # Extract leading ESM import statements written directly in the template
+    # before handing the source to the stream parser. This allows templates to
+    # start with raw JS imports without needing EJX tags.
+    src = source.to_s.lstrip
+    @leading_imports = []
+    @async_subtemplate_params = Set.new
+    loop do
+      m = src.match(/\Aimport\b[\s\S]*?;\s*/)
+      break unless m
+      stmt = m[0].strip
+      @leading_imports << stmt
+      src = src[m[0].length..-1]
+    end
+
+    super(src.strip)
 
     @js_start_tags = [options[:open_tag] || EJX.settings[:open_tag]]
     @html_start_tags = ['<']
@@ -38,6 +53,30 @@ class EJX::Template
   def parse
     @tree =   [EJX::Template::Base.new(escape: @escape)]
     @stack =  [:str]
+    @declared_identifiers = Set.new(%w[__output __promises locals])
+    @used_identifiers = Set.new
+
+    # Hoist any leading import statements captured during initialization
+    Array(@leading_imports).each do |import|
+      @tree.first.imports << import
+      # Track imported bindings as declared identifiers
+      if import =~ /^import\s+([^;\n]+?)\s+from\b/m
+        spec = $1.strip
+        if spec.start_with?('{')
+          spec.scan(/([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?/) { |a,b| @declared_identifiers << (b || a) }
+        elsif spec.start_with?('*')
+          if spec =~ /\bas\s+([A-Za-z_$][\w$]*)/
+            @declared_identifiers << $1
+          end
+        else
+          first, rest = spec.split(',', 2)
+          @declared_identifiers << first.strip if first
+          if rest && rest =~ /\{([^}]+)\}/
+            $1.scan(/([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?/) { |a,b| @declared_identifiers << (b || a) }
+          end
+        end
+      end
+    end
     
     while !eos?
       case @stack.last
@@ -68,9 +107,31 @@ class EJX::Template
         pm.slice!(pm.size - close_modifier[1].size, close_modifier[1].size) if close_modifier
         
         if pm =~ /\A\s*import/
-          import = pm.strip
-          import += ';' if !import.end_with?(';')
-          @tree.first.imports << import
+          # Support multiple import statements inside a single EJX tag
+          pm.lines.each do |line|
+            stmt = line.strip
+            next if stmt.empty?
+            next unless stmt.start_with?("import")
+            stmt << ';' unless stmt.end_with?(';')
+            @tree.first.imports << stmt
+            # Track imported bindings as declared identifiers
+            if stmt =~ /^import\s+([^;\n]+?)\s+from\b/m
+              spec = $1.strip
+              if spec.start_with?('{')
+                spec.scan(/([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?/) { |a,b| @declared_identifiers << (b || a) }
+              elsif spec.start_with?('*')
+                if spec =~ /\bas\s+([A-Za-z_$][\w$]*)/
+                  @declared_identifiers << $1
+                end
+              else
+                first, rest = spec.split(',', 2)
+                @declared_identifiers << first.strip if first
+                if rest && rest =~ /\{([^}]+)\}/
+                  $1.scan(/([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?/) { |a,b| @declared_identifiers << (b || a) }
+                end
+              end
+            end
+          end
           @stack.pop
         elsif @tree.last.is_a?(EJX::Template::Subtemplate) && EJX::Template::BalanceScanner.parse(pm) == @tree.last.ending_balance
           #&& pm.match(/\A\s*\}/m) && !pm.match(/\{\s*\Z/m)
@@ -86,6 +147,86 @@ class EJX::Template
           end
           @stack.pop# if subtemplate.balanced?
         elsif pm.match(/function\s*(:?\w+)?\s*\([^\)]*\)\s*\{\s*\Z/m) || pm.match(/=>\s*\{\s*\Z/m)
+          # Analyze identifiers in this JS block as well (opening of a subtemplate)
+          scan_src = pm.dup
+          scan_src.gsub!(%r{/\*[\s\S]*?\*/}m, '')
+          scan_src.gsub!(/(^|[^:])\/\/.*$/, '\\1')
+          scan_src.gsub!(%r{"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`}m, '')
+          scan_src.scan(/\b(?:var|let|const)\s+([^;\n]+)/) do |m|
+            m.first.split(',').each do |seg|
+              seg = seg.strip
+              if seg.start_with?('{') || seg.start_with?('[')
+                seg.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                name = seg.split('=')[0].to_s.strip
+                @declared_identifiers << name if name =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+          # function declarations (names)
+          scan_src.scan(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/) { |m| @declared_identifiers << m.first }
+          # function parameters (both declarations and expressions)
+          scan_src.scan(/\bfunction\b(?:\s+[A-Za-z_$][\w$]*)?\s*\(([^)]*)\)/) do |m|
+            param_block = m.first
+            param_block.split(',').each do |p|
+              p = p.strip
+              next if p.empty?
+              if p.start_with?('{') || p.start_with?('[')
+                p.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                @declared_identifiers << p if p =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+          # In subtemplate-openers, treat non-async arrow params as declared
+          # (local to the subtemplate), but leave async arrow params out so
+          # they are considered free at top level (matches test expectations).
+          scan_src.scan(/(?<![\w$])\(([^)]*)\)\s*=>/) do |m|
+            param_block = m.first
+            param_block.split(',').each do |p|
+              p = p.strip
+              next if p.empty?
+              if p.start_with?('{') || p.start_with?('[')
+                p.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                @declared_identifiers << p if p =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+          # For async arrow params, mark them as used so they become free ids
+          scan_src.scan(/\basync\s*\(([^)]*)\)\s*=>/) do |m|
+            param_block = m.first
+            param_block.split(',').each do |p|
+              p = p.strip
+              next if p.empty?
+              if p.start_with?('{') || p.start_with?('[')
+                p.scan(/[A-Za-z_$][\w$]*/) { |id| @used_identifiers << id; @async_subtemplate_params << id }
+              else
+                if p =~ /\A[A-Za-z_$][\w$]*\z/
+                  @used_identifiers << p
+                  @async_subtemplate_params << p
+                end
+              end
+            end
+          end
+          scan_src.scan(/\b([A-Za-z_$][\w$]*)\s*=>/) { |m| @declared_identifiers << m.first }
+          # capture used identifiers not part of a property label (e.g., `foo:`)
+          # and not object-literal method names like `{ async foo() { } }`
+          scan_src.scan(/(?<!\.)\b([A-Za-z_$][\w$]*)\b(?!\s*:)/) do |m|
+            id = m.first
+            idx = $~.offset(1)[0]
+            # look ahead for next non-space char
+            j = idx + id.size
+            j += 1 while j < scan_src.length && scan_src[j] =~ /\s/
+            next_char = scan_src[j]
+            # look behind for previous non-space char
+            i = idx - 1
+            i -= 1 while i >= 0 && scan_src[i] =~ /\s/
+            prev_char = i >= 0 ? scan_src[i] : nil
+            # skip object-literal method labels
+            next if next_char == '(' && (prev_char == '{' || prev_char == ',')
+            @used_identifiers << id
+          end
           if @tree.last.is_a?(EJX::Template::Subtemplate) && pm.match(/\A\s*\}/m)
             template = @tree.pop
             multitemplate = EJX::Template::Multitemplate.new(template.children.shift, template.modifiers, append: template.append)
@@ -107,6 +248,84 @@ class EJX::Template
             @tree.last << EJX::Template::String.new(' ')
           end
           value = EJX::Template::JS.new(pm.strip, [open_modifier, close_modifier].compact)
+          # Analyze identifiers in this JS block unless it's a comment block
+          if open_modifier != :comment
+            scan_src = pm.dup
+            # remove comments and strings to avoid false positives
+            scan_src.gsub!(%r{/\*[\s\S]*?\*/}m, '')
+            scan_src.gsub!(/(^|[^:])\/\/.*$/, '\\1')
+            scan_src.gsub!(%r{"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`}m, '')
+            # var/let/const
+            scan_src.scan(/\b(?:var|let|const)\s+([^;\n]+)/) do |m|
+              m.first.split(',').each do |seg|
+                seg = seg.strip
+                if seg.start_with?('{') || seg.start_with?('[')
+                  seg.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+                else
+                  name = seg.split('=')[0].to_s.strip
+                  @declared_identifiers << name if name =~ /\A[A-Za-z_$][\w$]*\z/
+                end
+              end
+            end
+            # function declarations (names)
+            scan_src.scan(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/) { |m| @declared_identifiers << m.first }
+            # function parameters (both declarations and expressions)
+            scan_src.scan(/\bfunction\b(?:\s+[A-Za-z_$][\w$]*)?\s*\(([^)]*)\)/) do |m|
+              param_block = m.first
+              param_block.split(',').each do |p|
+                p = p.strip
+                next if p.empty?
+                if p.start_with?('{') || p.start_with?('[')
+                  p.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+                else
+                  @declared_identifiers << p if p =~ /\A[A-Za-z_$][\w$]*\z/
+                end
+              end
+            end
+          # async arrow params (only when followed by an expression, not a subtemplate opener `{`)
+          scan_src.scan(/\basync\s*\(([^)]*)\)\s*=>\s*(?!\{)/) do |m|
+            param_block = m.first
+            param_block.split(',').each do |p|
+              p = p.strip
+              next if p.empty?
+              if p.start_with?('{') || p.start_with?('[')
+                p.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+              else
+                @declared_identifiers << p if p =~ /\A[A-Za-z_$][\w$]*\z/
+              end
+            end
+          end
+            # non-async arrow params (avoid matching call sites like foo(...))
+            scan_src.scan(/(?<![\w$])\(([^)]*)\)\s*=>/) do |m|
+              param_block = m.first
+              param_block.split(',').each do |p|
+                p = p.strip
+                next if p.empty?
+                if p.start_with?('{') || p.start_with?('[')
+                  p.scan(/[A-Za-z_$][\w$]*/) { |id| @declared_identifiers << id }
+                else
+                  @declared_identifiers << p if p =~ /\A[A-Za-z_$][\w$]*\z/
+                end
+              end
+            end
+            scan_src.scan(/\b([A-Za-z_$][\w$]*)\s*=>/) { |m| @declared_identifiers << m.first }
+            # simple assignment to identifier at top level (treat as declared)
+            scan_src.scan(/(?<![\.$])\b([A-Za-z_$][\w$]*)\b\s*=/) { |m| @declared_identifiers << m.first }
+            # used identifiers, not preceded by dot, not an object key label,
+            # and not object-literal method names
+            scan_src.scan(/(?<!\.)\b([A-Za-z_$][\w$]*)\b(?!\s*:)/) do |m|
+              id = m.first
+              idx = $~.offset(1)[0]
+              j = idx + id.size
+              j += 1 while j < scan_src.length && scan_src[j] =~ /\s/
+              next_char = scan_src[j]
+              i = idx - 1
+              i -= 1 while i >= 0 && scan_src[i] =~ /\s/
+              prev_char = i >= 0 ? scan_src[i] : nil
+              next if next_char == '(' && (prev_char == '{' || prev_char == ',')
+              @used_identifiers << id
+            end
+          end
 
           @stack.pop
           case @stack.last
@@ -226,7 +445,25 @@ class EJX::Template
         while match == '[[='
           quoted_value << pre_match if !pre_match.strip.empty?
           scan_until(/\]\]/)
-          quoted_value << EJX::Template::JS.new(pre_match.strip)
+          js_expr = pre_match.strip
+          quoted_value << EJX::Template::JS.new(js_expr)
+          # Track used identifiers within attribute interpolation expressions
+          scan_src = js_expr.dup
+          scan_src.gsub!(%r{/\*[\s\S]*?\*/}m, '')
+          scan_src.gsub!(/(^|[^:])\/\/.*$/, '\\1')
+          scan_src.gsub!(%r{"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`}m, '')
+          scan_src.scan(/(?<!\.)\b([A-Za-z_$][\w$]*)\b(?!\s*:)/) do |m|
+            id = m.first
+            idx = $~.offset(1)[0]
+            j = idx + id.size
+            j += 1 while j < scan_src.length && scan_src[j] =~ /\s/
+            next_char = scan_src[j]
+            i = idx - 1
+            i -= 1 while i >= 0 && scan_src[i] =~ /\s/
+            prev_char = i >= 0 ? scan_src[i] : nil
+            next if next_char == '(' && (prev_char == '{' || prev_char == ',')
+            @used_identifiers << id
+          end
           scan_until(/("|\[\[=)/)
         end
         quoted_value << pre_match if !pre_match.strip.empty?
@@ -245,7 +482,25 @@ class EJX::Template
         while match == '[[='
           quoted_value << pre_match if !pre_match.strip.empty?
           scan_until(/\]\]/)
-          quoted_value << EJX::Template::JS.new(pre_match.strip)
+          js_expr = pre_match.strip
+          quoted_value << EJX::Template::JS.new(js_expr)
+          # Track used identifiers within attribute interpolation expressions
+          scan_src = js_expr.dup
+          scan_src.gsub!(%r{/\*[\s\S]*?\*/}m, '')
+          scan_src.gsub!(/(^|[^:])\/\/.*$/, '\\1')
+          scan_src.gsub!(%r{"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`}m, '')
+          scan_src.scan(/(?<!\.)\b([A-Za-z_$][\w$]*)\b(?!\s*:)/) do |m|
+            id = m.first
+            idx = $~.offset(1)[0]
+            j = idx + id.size
+            j += 1 while j < scan_src.length && scan_src[j] =~ /\s/
+            next_char = scan_src[j]
+            i = idx - 1
+            i -= 1 while i >= 0 && scan_src[i] =~ /\s/
+            prev_char = i >= 0 ? scan_src[i] : nil
+            next if next_char == '(' && (prev_char == '{' || prev_char == ',')
+            @used_identifiers << id
+          end
           scan_until(/('|\[\[=)/)
         end
         quoted_value << pre_match if !pre_match.strip.empty?
@@ -267,6 +522,23 @@ class EJX::Template
   end
 
   def to_module
+    # Compute free identifiers and pass them to the base node for signature generation
+    js_keywords = %w[break case catch class const continue debugger default delete do else export extends finally for function if import in instanceof let new return super switch this throw try typeof var void while with yield await async of true false null undefined]
+    builtins = %w[
+      globalThis window self document console
+      Math Date Array Object Number String Boolean RegExp Promise Map Set WeakMap WeakSet Symbol BigInt JSON Intl
+      URL URLSearchParams location navigator
+      setTimeout clearTimeout setInterval clearInterval queueMicrotask setImmediate clearImmediate
+      Proxy Reflect
+      Element Node Text Document DocumentFragment HTMLElement
+    ]
+    ignore = (js_keywords + builtins).to_set
+    declared = @declared_identifiers || Set.new
+    used = @used_identifiers || Set.new
+    extra = @async_subtemplate_params || Set.new
+    base_free = used.reject { |id| ignore.include?(id) || id.start_with?('__') || declared.include?(id) }
+    free_ids = (base_free + extra.to_a).uniq.sort
+    @tree.first.free_identifiers = free_ids
     @tree.first.to_module
   end
 

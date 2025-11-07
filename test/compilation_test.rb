@@ -2,17 +2,78 @@ require 'test_helper'
 
 class CompilationTest < Minitest::Test
   
+  test "compile with an import and method call" do
+    result = EJX.compile(<<~DATA)
+    <%
+    import attachmentDropzone from 'helpers/attachmentDropzone';
+    import ProposalShow from 'views/proposals/show.html.ejs';
+    %>Hello <%= attachmentDropzone(ProposalShow(name)) %>
+    DATA
+
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      import attachmentDropzone from 'helpers/attachmentDropzone';
+      import ProposalShow from 'views/proposals/show.html.ejs';
+      
+      export default async function self ({ name } = {}) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          __ejx_append(attachmentDropzone(ProposalShow(name)), __output, 'escape', __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
   test "compile" do
     result = EJX.compile("Hello <%= name %>")
     
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function self (locals) {
+      export default async function self ({ name } = {}) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
           __ejx_append(name, __output, 'escape', __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
+  test "compile with object keys" do
+    result = EJX.compile("Hello <%= {foo: 'test'}[name] %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function self ({ name } = {}) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          __ejx_append({foo: 'test'}[name], __output, 'escape', __promises);
+
+          await Promise.all(__promises);
+          return __output;
+      }
+    JS
+  end
+  
+  test "compile with async function" do
+    result = EJX.compile("Hello <%= Array.from([name]).forEach(async (clause_code, index) => { return clause_code }) %>")
+    
+    assert_equal(<<~JS.strip, result.strip)
+      import {append as __ejx_append} from 'ejx';
+      
+      export default async function self ({ name } = {}) {
+          var __output = [], __promises = [];
+          
+          __output.push("Hello ");
+          __ejx_append(Array.from([name]).forEach(async (clause_code, index) => { return clause_code }), __output, 'escape', __promises);
 
           await Promise.all(__promises);
           return __output;
@@ -141,7 +202,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function self (locals) {
+      export default async function self ({ records } = {}) {
           var __output = [], __promises = [];
           
           var __a_results = [];
@@ -177,7 +238,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function self (locals) {
+      export default async function self ({ x } = {}) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");
@@ -303,7 +364,7 @@ class CompilationTest < Minitest::Test
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
       
-      export default async function self (locals) {
+      export default async function self ({ el } = {}) {
           var __output = [], __promises = [];
           
           __output.push("Hello ");

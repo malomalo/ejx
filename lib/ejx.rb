@@ -66,3 +66,18 @@ if defined?(Condenser)
     register_template  'application/ejx', Condenser::EjxTransformer
   end
 end
+
+if defined?(Propshaft)
+  begin
+    require 'propshaft/compiler/ejx'
+  rescue LoadError
+    
+  end
+end
+
+if defined?(Rails::Railtie)
+  begin
+    require_relative "ejx/railtie"
+  rescue LoadError
+  end
+end
