@@ -32,6 +32,12 @@ class EJX::Template
     @close_tag_modifiers = EJX.settings[:close_tag_modifiers].merge(options[:close_tag_modifiers] || {})
     
     @escape = options[:escape]
+
+    @open_escape_tag = @js_start_tags.first + @open_tag_modifiers[:escape]
+    @dq_attr_scan = /("|#{Regexp.escape(@open_escape_tag)})/
+    @sq_attr_scan = /('|#{Regexp.escape(@open_escape_tag)})/
+    @close_tag_scan = /#{Regexp.escape(@js_close_tags.first)}/
+
     parse
   end
 
@@ -222,12 +228,12 @@ class EJX::Template
         end
       when :html_tag_attr_value_double_quoted
         quoted_value = []
-        scan_until(/("|\[\[=)/)
-        while match == '[[='
+        scan_until(@dq_attr_scan)
+        while match == @open_escape_tag
           quoted_value << pre_match if !pre_match.strip.empty?
-          scan_until(/\]\]/)
+          scan_until(@close_tag_scan)
           quoted_value << EJX::Template::JS.new(pre_match.strip)
-          scan_until(/("|\[\[=)/)
+          scan_until(@dq_attr_scan)
         end
         quoted_value << pre_match if !pre_match.strip.empty?
         rewind(1)
@@ -241,12 +247,12 @@ class EJX::Template
         @stack.pop
       when :html_tag_attr_value_single_quoted
         quoted_value = []
-        scan_until(/('|\[\[=)/)
-        while match == '[[='
+        scan_until(@sq_attr_scan)
+        while match == @open_escape_tag
           quoted_value << pre_match if !pre_match.strip.empty?
-          scan_until(/\]\]/)
+          scan_until(@close_tag_scan)
           quoted_value << EJX::Template::JS.new(pre_match.strip)
-          scan_until(/('|\[\[=)/)
+          scan_until(@sq_attr_scan)
         end
         quoted_value << pre_match if !pre_match.strip.empty?
         rewind(1)
