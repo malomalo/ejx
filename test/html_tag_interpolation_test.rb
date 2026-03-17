@@ -3,7 +3,7 @@ require 'test_helper'
 class HTMLTagInterpolationTest < Minitest::Test
   
   test "html tag value with interpolation in double quotes" do
-    result = EJX.compile('<div class="[[= klass ]]"></div>')
+    result = EJX.compile('<div class="<%= klass %>"></div>')
 
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
@@ -22,7 +22,7 @@ class HTMLTagInterpolationTest < Minitest::Test
   end
 
   test "html tag value with interpolation in single quotes" do
-    result = EJX.compile("<div class='[[= klass ]]'></div>")
+    result = EJX.compile("<div class='<%= klass %>'></div>")
 
     assert_equal(<<~JS.strip, result.strip)
       import {append as __ejx_append} from 'ejx';
@@ -43,7 +43,7 @@ class HTMLTagInterpolationTest < Minitest::Test
   test "html tag value with interpolation in middle of attribute" do
     result = EJX.compile(<<~EJX)
     <% const foo = true %>
-    <div class="uniformLabel [[= foo ? 'disabled' : 'bold' ]] -yellow">Hello World</div>
+    <div class="uniformLabel <%= foo ? 'disabled' : 'bold' %> -yellow">Hello World</div>
     EJX
     
     assert_equal(<<~JS.strip, result.strip)

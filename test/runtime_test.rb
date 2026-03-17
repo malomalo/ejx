@@ -82,7 +82,7 @@ class RuntimeTest < Minitest::Test
   end
 
   test "html tag value with interpolation in double quotes" do
-    t1 = template('<div class="[[= locals.klass ]]"></div>')
+    t1 = template('<div class="<%= locals.klass %>"></div>')
     assert_equal(['<div class="name"></div>'], render(t1, klass: 'name'))
   end
 
@@ -478,7 +478,7 @@ class RuntimeTest < Minitest::Test
   test "html attribute interpolation" do
     t1 = template(<<~EJX)
     <% const foo = true %>
-    <div class="uniformLabel [[= foo ? 'disabled' : 'bold' ]] -yellow">Hello World</div>
+    <div class="uniformLabel <%= foo ? 'disabled' : 'bold' %> -yellow">Hello World</div>
     EJX
     assert_equal([" ", "<div class=\"uniformLabel disabled -yellow\">Hello World</div>"], render(t1))
   end

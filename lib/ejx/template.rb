@@ -19,19 +19,24 @@ class EJX::Template
   
   def initialize(source, options={})
     super(source.strip)
-
-    @js_start_tags = [options[:open_tag] || EJX.settings[:open_tag]]
-    @html_start_tags = ['<']
-    @start_tags = @js_start_tags + @html_start_tags
     
-    @js_close_tags = [options[:close_tag] || EJX.settings[:close_tag]]
-    @html_close_tags = ['/>', '>']
-    @close_tags = @js_close_tags + @html_close_tags
-    
+    @escape = options[:escape]
     @open_tag_modifiers = EJX.settings[:open_tag_modifiers].merge(options[:open_tag_modifiers] || {})
     @close_tag_modifiers = EJX.settings[:close_tag_modifiers].merge(options[:close_tag_modifiers] || {})
     
-    @escape = options[:escape]
+    @js_start_tag = options[:open_tag] || EJX.settings[:open_tag]
+    @js_start_escape_tag = @js_start_tag + @open_tag_modifiers[:escape]
+    @html_start_tags = ['<']
+    @start_tags = [@js_start_tag] + @html_start_tags
+
+    @js_close_tag = options[:close_tag] || EJX.settings[:close_tag]
+    @html_close_tags = ['/>', '>']
+    @close_tags = [@js_close_tag] + @html_close_tags
+    
+    @html_tag_attr_value_double_quoted_scan = /("|#{Regexp.escape(@js_start_escape_tag)})/
+    @html_tag_attr_value_single_quoted_scan = /('|#{Regexp.escape(@js_start_escape_tag)})/
+    @js_close_tag_scan = /#{Regexp.escape(@js_close_tag)}/
+
     parse
   end
 
@@ -51,7 +56,7 @@ class EJX::Template
           if peek(3) == '!--'
             scan_until('!--')
             @stack << :html_comment
-          elsif @js_start_tags.include?(match)
+          elsif @js_start_tag == match
             # @stack.pop
             @stack << :js
           elsif @html_start_tags.include?(match)
@@ -60,7 +65,7 @@ class EJX::Template
         end
       when :js
         pre_js = pre_match
-        scan_until(Regexp.new("(#{@js_close_tags.map{|s| Regexp.escape(s) }.join('|')})"))
+        scan_until(@js_close_tag_scan)
         pm = pre_match
         open_modifier = @open_tag_modifiers.find { |k,v| pm.start_with?(v) }&.first
         close_modifier = @close_tag_modifiers.find { |k,v| match.end_with?(v) }&.first
@@ -127,8 +132,8 @@ class EJX::Template
           @tree.last << EJX::Template::String.new(' ')
         end
 
-        scan_until(Regexp.new("(#{@js_start_tags.map{|s| Regexp.escape(s) }.join('|')}|\\/|[^\\s>]+)"))
-        if @js_start_tags.include?(match)
+        scan_until(/(#{Regexp.escape(@js_start_tag)}|\/|[^\s>]+)/)
+        if @js_start_tag == match
           @tree << EJX::Template::HTMLTag.new
           @stack << :js
         elsif match == '/'
@@ -140,9 +145,9 @@ class EJX::Template
           @stack << :html_tag_attr_key
         end
       when :html_close_tag
-        scan_until(Regexp.new("(#{@js_start_tags.map{|s| Regexp.escape(s) }.join('|')}|[^\\s>]+)"))
+        scan_until(/(#{Regexp.escape(@js_start_tag)}|[^\s>]+)/)
 
-        if @js_start_tags.include?(match)
+        if @js_start_tag == match
           @stack << :js
         else
           el = @tree.pop
@@ -154,8 +159,8 @@ class EJX::Template
           @stack.pop
         end
       when :html_tag_attr_key
-        scan_until(Regexp.new("(#{(@js_start_tags+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|[^\\s=>]+)"))
-        if @js_start_tags.include?(match)
+        scan_until(/(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|[^\s=>]+)/)
+        if @js_start_tag == match
           @stack << :js
         elsif @html_close_tags.include?(match)
           if match == '/>' || EJX::VOID_ELEMENTS.include?(@tree.last.tag_name)
@@ -179,9 +184,9 @@ class EJX::Template
           @stack << :html_tag_attr_value_tx
         end
       when :html_tag_attr_value_tx
-        scan_until(Regexp.new("(#{(@js_start_tags+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|=|\\S)"))
+        scan_until(/(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|=|\S)/)
         tag_key = @tree.last.attrs.pop
-        if @js_start_tags.include?(match)
+        if @js_start_tag == match
           @stack << :js
         elsif @html_close_tags.include?(match)
           el = @tree.last
@@ -204,9 +209,9 @@ class EJX::Template
         end
 
       when :html_tag_attr_value
-        scan_until(Regexp.new("(#{(@js_start_tags+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|'|\"|\\S+)"))
+        scan_until(/(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|'|"|\S+)/)
 
-        if @js_start_tags.include?(match)
+        if @js_start_tag == match
           push(:js)
         elsif match == '"'
           @stack.pop
@@ -222,12 +227,12 @@ class EJX::Template
         end
       when :html_tag_attr_value_double_quoted
         quoted_value = []
-        scan_until(/("|\[\[=)/)
-        while match == '[[='
+        scan_until(@html_tag_attr_value_double_quoted_scan)
+        while match == @js_start_escape_tag
           quoted_value << pre_match if !pre_match.strip.empty?
-          scan_until(/\]\]/)
+          scan_until(@js_close_tag_scan)
           quoted_value << EJX::Template::JS.new(pre_match.strip)
-          scan_until(/("|\[\[=)/)
+          scan_until(@html_tag_attr_value_double_quoted_scan)
         end
         quoted_value << pre_match if !pre_match.strip.empty?
         rewind(1)
@@ -241,12 +246,12 @@ class EJX::Template
         @stack.pop
       when :html_tag_attr_value_single_quoted
         quoted_value = []
-        scan_until(/('|\[\[=)/)
-        while match == '[[='
+        scan_until(@html_tag_attr_value_single_quoted_scan)
+        while match == @js_start_escape_tag
           quoted_value << pre_match if !pre_match.strip.empty?
-          scan_until(/\]\]/)
+          scan_until(@js_close_tag_scan)
           quoted_value << EJX::Template::JS.new(pre_match.strip)
-          scan_until(/('|\[\[=)/)
+          scan_until(@html_tag_attr_value_single_quoted_scan)
         end
         quoted_value << pre_match if !pre_match.strip.empty?
         rewind(1)
