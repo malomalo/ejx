@@ -21,16 +21,14 @@ class EJX::Template
     super(source.strip)
     
     @escape = options[:escape]
-    
     @open_tag_modifiers = EJX.settings[:open_tag_modifiers].merge(options[:open_tag_modifiers] || {})
+    @close_tag_modifiers = EJX.settings[:close_tag_modifiers].merge(options[:close_tag_modifiers] || {})
     
     @js_start_tag = options[:open_tag] || EJX.settings[:open_tag]
     @js_start_escape_tag = @js_start_tag + @open_tag_modifiers[:escape]
     @html_start_tags = ['<']
     @start_tags = [@js_start_tag] + @html_start_tags
-    
-    @close_tag_modifiers = EJX.settings[:close_tag_modifiers].merge(options[:close_tag_modifiers] || {})
-    
+
     @js_close_tag = options[:close_tag] || EJX.settings[:close_tag]
     @html_close_tags = ['/>', '>']
     @close_tags = [@js_close_tag] + @html_close_tags
