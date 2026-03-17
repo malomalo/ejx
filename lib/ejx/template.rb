@@ -35,18 +35,10 @@ class EJX::Template
     @html_close_tags = ['/>', '>']
     @close_tags = [@js_close_tag] + @html_close_tags
     
-    
     @html_tag_attr_value_double_quoted_scan = /("|#{Regexp.escape(@js_start_escape_tag)})/
     @html_tag_attr_value_single_quoted_scan = /('|#{Regexp.escape(@js_start_escape_tag)})/
     @js_close_tag_scan = /#{Regexp.escape(@js_close_tag)}/
-    #@js_close_tag_scan = /(#{Regexp.escape(@js_close_tag)})/
 
-    @html_tag_js_start_tag_scan = /(#{Regexp.escape(@js_start_tag)}|\/|[^\s>]+)/
-    @html_close_tag_js_start_tag_scan = /(#{Regexp.escape(@js_start_tag)}|[^\s>]+)/
-    @html_tag_attr_key_scan = /(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|[^\s=>]+)/
-    @html_tag_attr_value_scan = /(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|'|"|\S+)/
-    @html_tag_attr_value_tx_scan = /(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|=|\S)/
-    
     parse
   end
 
@@ -142,7 +134,7 @@ class EJX::Template
           @tree.last << EJX::Template::String.new(' ')
         end
 
-        scan_until(@html_tag_js_start_tag_scan)
+        scan_until(/(#{Regexp.escape(@js_start_tag)}|\/|[^\s>]+)/)
         if @js_start_tag == match
           @tree << EJX::Template::HTMLTag.new
           @stack << :js
@@ -155,7 +147,7 @@ class EJX::Template
           @stack << :html_tag_attr_key
         end
       when :html_close_tag
-        scan_until(@html_close_tag_js_start_tag_scan)
+        scan_until(/(#{Regexp.escape(@js_start_tag)}|[^\s>]+)/)
 
         if @js_start_tag == match
           @stack << :js
@@ -169,7 +161,7 @@ class EJX::Template
           @stack.pop
         end
       when :html_tag_attr_key
-        scan_until(@html_tag_attr_key_scan)
+        scan_until(/(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|[^\s=>]+)/)
         if @js_start_tag == match
           @stack << :js
         elsif @html_close_tags.include?(match)
@@ -194,7 +186,7 @@ class EJX::Template
           @stack << :html_tag_attr_value_tx
         end
       when :html_tag_attr_value_tx
-        scan_until(@html_tag_attr_value_tx_scan)
+        scan_until(/(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|=|\S)/)
         tag_key = @tree.last.attrs.pop
         if @js_start_tag == match
           @stack << :js
@@ -219,7 +211,7 @@ class EJX::Template
         end
 
       when :html_tag_attr_value
-        scan_until(@html_tag_attr_value_scan)
+        scan_until(/(#{([@js_start_tag]+@html_close_tags).map{|s| Regexp.escape(s) }.join('|')}|'|"|\S+)/)
 
         if @js_start_tag == match
           push(:js)
