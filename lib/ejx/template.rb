@@ -18,7 +18,7 @@ class EJX::Template
   include StreamParser
   
   def initialize(source, options={})
-    super(self.class.utf8_source(source, options[:filename]).strip)
+    super(utf8_source(source, options[:filename]).strip)
     
     @escape = options[:escape]
     @open_tag_modifiers = EJX.settings[:open_tag_modifiers].merge(options[:open_tag_modifiers] || {})
@@ -43,7 +43,7 @@ class EJX::Template
   # The output is JavaScript, which is read as UTF-8, so the source must be
   # UTF-8 too. BINARY/US-ASCII source (e.g. from File.binread) is relabeled,
   # other encodings are transcoded, and invalid bytes raise.
-  def self.utf8_source(source, filename = nil)
+  def utf8_source(source, filename = nil)
     utf8 = case source.encoding
     when Encoding::UTF_8
       source
@@ -53,18 +53,19 @@ class EJX::Template
       if source.valid_encoding?
         source.encode(Encoding::UTF_8)
       else
-        raise EJX::TemplateError.new(encoding_error(filename, source.encoding))
+        raise EJX::TemplateError.new(self.class.encoding_error(filename, source.encoding))
       end
     end
 
     if !utf8.valid_encoding?
-      raise EJX::TemplateError.new(encoding_error(filename, Encoding::UTF_8))
+      raise EJX::TemplateError.new(self.class.encoding_error(filename, Encoding::UTF_8))
     end
 
     utf8.delete_prefix("\uFEFF")
   rescue EncodingError => e
-    raise EJX::TemplateError.new(encoding_error(filename, source.encoding) + " (#{e.message})")
+    raise EJX::TemplateError.new(self.class.encoding_error(filename, source.encoding) + " (#{e.message})")
   end
+  private :utf8_source
 
   def self.encoding_error(filename, encoding)
     msg = "template source isn't valid #{encoding}"
