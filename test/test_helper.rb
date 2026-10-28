@@ -1,6 +1,7 @@
 require 'byebug'
 require "minitest/autorun"
 require 'minitest/reporters'
+require "condenser"
 require "ejx"
 
 Minitest::Reporters.use! Minitest::Reporters::SpecReporter.new

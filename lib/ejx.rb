@@ -63,6 +63,6 @@ if defined?(Condenser)
   Condenser.configure do
     autoload :EjxTransformer, 'condenser/transformers/ejx'
     register_mime_type 'application/ejx', extensions: '.ejx', charset: :unicode
-    register_template  'application/ejx', Condenser::EjxTransformer
+    register_template  'application/ejx', Condenser::EjxTransformer.new
   end
 end

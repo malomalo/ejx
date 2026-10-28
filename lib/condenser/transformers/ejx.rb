@@ -3,19 +3,16 @@ class Condenser::EjxTransformer < Condenser::NodeProcessor
   attr_accessor :options
   
   def initialize(options = {})
+    super()
     @options = options
   end
   
-  def self.setup(environment)
+  def setup(environment)
     require 'ejx' unless defined?(::EJX)
 
     if !environment.path.include?(EJX::ASSET_DIR)
       environment.append_path(EJX::ASSET_DIR)
     end
-  end
-  
-  def self.call(environment, input)
-    new.call(environment, input)
   end
 
   def call(environment, input)

@@ -14,6 +14,7 @@ Gem::Specification.new do |s|
 
   s.add_runtime_dependency 'stream_parser', '>= 0.3'
 
+  s.add_development_dependency "condenser", ">= 2.0.0.rc2"
   s.add_development_dependency "rake"
   s.add_development_dependency "byebug"
   s.add_development_dependency "bundler"
