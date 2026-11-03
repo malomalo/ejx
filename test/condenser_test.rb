@@ -30,6 +30,7 @@ class CondenserTest < Minitest::Test
   end
 
   def teardown
+    EJX.settings = @settings if @settings
     Condenser::NodeWorker.stop_workers
     FileUtils.remove_entry(@path, true)
   end
@@ -61,7 +62,55 @@ class CondenserTest < Minitest::Test
 
     assert_instance_of Condenser::EjxTransformer, template
     assert_kind_of Condenser::Processor, template
-    assert_equal({}, template.options)
+    assert_equal({
+      open_tag: '<%',
+      close_tag: '%>',
+      open_tag_modifiers: { escape: '=', unescape: '-', comment: '#', literal: '%' },
+      close_tag_modifiers: { trim: '-', literal: '%' }
+    }, template.options)
+  end
+
+  test "options include the global EJX.settings" do
+    @settings = EJX.settings
+    transformer = Condenser::EjxTransformer.new
+    before = transformer.options
+
+    EJX.settings = @settings.merge(open_tag: '{{', close_tag: '}}')
+
+    refute_equal before, transformer.options
+    assert_equal '{{', transformer.options[:open_tag]
+    assert_equal '}}', transformer.options[:close_tag]
+  end
+
+  test "instance options override the global EJX.settings" do
+    @settings = EJX.settings
+    EJX.settings = @settings.merge(
+      open_tag: '{{',
+      open_tag_modifiers: @settings[:open_tag_modifiers].merge(escape: '~')
+    )
+    transformer = Condenser::EjxTransformer.new(open_tag: '[[', open_tag_modifiers: { comment: '!' }, escape: 'escape.js')
+
+    assert_equal '[[', transformer.options[:open_tag]
+    assert_equal '%>', transformer.options[:close_tag]
+    assert_equal({ escape: '~', unescape: '-', comment: '!', literal: '%' }, transformer.options[:open_tag_modifiers])
+    assert_equal 'escape.js', transformer.options[:escape]
+  end
+
+  test "changing EJX.settings changes the cache key and etag" do
+    @settings = EJX.settings
+    file 'template.js.ejx', '<div>{{= x }}</div>'
+    cache = Condenser::Cache::MemoryStore.new
+
+    asset = new_env(cache: cache).find('template.js')
+    cache_key, etag, source = asset.cache_key, asset.etag, asset.source
+
+    EJX.settings = @settings.merge(open_tag: '{{', close_tag: '}}')
+    asset = new_env(cache: cache).find('template.js')
+
+    refute_equal cache_key, asset.cache_key
+    refute_equal etag, asset.etag
+    refute_equal source, asset.source
+    assert_equal EJX.compile('<div>{{= x }}</div>'), asset.source
   end
 
   test "compiling a .js.ejx asset" do
@@ -104,7 +153,8 @@ class CondenserTest < Minitest::Test
     asset = env.find('template.js')
     asset.process
 
-    assert_equal({ open_tag: '[[', close_tag: ']]' }, transformer.options)
+    assert_equal '[[', transformer.options[:open_tag]
+    assert_equal ']]', transformer.options[:close_tag]
     assert_includes env.path, EJX::ASSET_DIR
     assert_equal EJX.compile('<div>[[= x ]]</div>', open_tag: '[[', close_tag: ']]'), asset.source
     assert_equal [File.join(EJX::ASSET_DIR, 'ejx.js')], asset.export_dependencies.map(&:source_file)
