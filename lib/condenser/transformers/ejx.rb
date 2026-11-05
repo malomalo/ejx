@@ -9,13 +9,7 @@ class Condenser::EjxTransformer < Condenser::NodeProcessor
 
   def options
     require 'ejx' unless defined?(::EJX)
-
-    @options.merge(
-      open_tag: @options[:open_tag] || EJX.settings[:open_tag],
-      close_tag: @options[:close_tag] || EJX.settings[:close_tag],
-      open_tag_modifiers: EJX.settings[:open_tag_modifiers].merge(@options[:open_tag_modifiers] || {}),
-      close_tag_modifiers: EJX.settings[:close_tag_modifiers].merge(@options[:close_tag_modifiers] || {})
-    )
+    deep_merge(EJX.settings, @options)
   end
   
   def setup(environment)
@@ -28,6 +22,20 @@ class Condenser::EjxTransformer < Condenser::NodeProcessor
 
   def call(environment, input)
     input[:source] = EJX::Template.new(input[:source], @options.merge(filename: input[:filename])).to_module
+  end
+
+  private
+
+  def deep_merge(settings, options)
+    settings.merge(options) do |_, setting, option|
+      if option.nil?
+        setting
+      elsif setting.is_a?(Hash) && option.is_a?(Hash)
+        deep_merge(setting, option)
+      else
+        option
+      end
+    end
   end
 
 end

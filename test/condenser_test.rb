@@ -66,8 +66,18 @@ class CondenserTest < Minitest::Test
       open_tag: '<%',
       close_tag: '%>',
       open_tag_modifiers: { escape: '=', unescape: '-', comment: '#', literal: '%' },
-      close_tag_modifiers: { trim: '-', literal: '%' }
+      close_tag_modifiers: { trim: '-', literal: '%' },
+      escape: nil
     }, template.options)
+  end
+
+  test "a nil instance option falls back to EJX.settings" do
+    @settings = EJX.settings
+    transformer = Condenser::EjxTransformer.new(open_tag: nil, open_tag_modifiers: { comment: nil })
+    EJX.settings = @settings.merge(open_tag: '{{')
+
+    assert_equal '{{', transformer.options[:open_tag]
+    assert_equal '#', transformer.options[:open_tag_modifiers][:comment]
   end
 
   test "options include the global EJX.settings" do
